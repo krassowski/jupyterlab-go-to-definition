@@ -1,7 +1,7 @@
 {
   "name": "jupyterlab_go_to_definition",
   "version": "0.1.0",
-  "description": "Jump to definition of a variable or function fin JupyterLab",
+  "description": "Jump to definition of a variable or function in JupyterLab",
   "keywords": [
     "jupyter",
     "jupyterlab",
@@ -15,7 +15,8 @@
   "author": "Michał Krassowski",
   "files": [
     "lib/**/*.{d.ts,eot,gif,html,jpg,js,js.map,json,png,svg,woff2,ttf}",
-    "style/**/*.{css,eot,gif,html,jpg,json,png,svg,woff2,ttf}"
+    "style/**/*.{css,eot,gif,html,jpg,json,png,svg,woff2,ttf}",
+    "schema/*.json"
   ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -40,6 +41,7 @@
     "typescript": "~3.1.1"
   },
   "jupyterlab": {
-    "extension": true
+    "extension": true,
+    "schemaDir": "schema"
   }
 }

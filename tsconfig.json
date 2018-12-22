@@ -12,8 +12,7 @@
     "strictNullChecks": false,
     "esModuleInterop": true,
     "target": "es2015",
-    "types": [],
-    //"allowSyntheticDefaultImports": true
+    "types": []
   },
-  "include": ["src/*"]
+  "include": ["src/*", "src/editors/*", "src/jumpers/*", "src/languages/*"]
 }
