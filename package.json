@@ -1,5 +1,5 @@
 {
-  "name": "jupyterlab_go_to_definition",
+  "name": "@krassowski/jupyterlab_go_to_definition",
   "version": "0.1.0",
   "description": "Jump to definition of a variable or function in JupyterLab",
   "keywords": [
@@ -33,9 +33,12 @@
   "dependencies": {
     "@jupyterlab/application": "^0.19.1",
     "@jupyterlab/apputils": "^0.19.1",
+    "@jupyterlab/codeeditor": "^0.19.1",
     "@jupyterlab/codemirror": "^0.19.1",
+    "@jupyterlab/coreutils": "^2.2.1",
     "@jupyterlab/fileeditor": "^0.19.1",
-    "@jupyterlab/notebook": "^0.19.2"
+    "@jupyterlab/notebook": "^0.19.2",
+    "@phosphor/algorithm": "^1.1.2"
   },
   "devDependencies": {
     "rimraf": "^2.6.1",

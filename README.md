@@ -17,7 +17,7 @@ The plugin is language-agnostic, though optimized for Python. Better support for
 ## Installation
 
 ```bash
-jupyter labextension install jupyterlab_go_to_definition
+jupyter labextension install @krassowski/jupyterlab_go_to_definition
 ```
 
 ## Development
