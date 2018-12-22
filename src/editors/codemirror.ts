@@ -1,7 +1,7 @@
 import CodeMirror from "codemirror";
 
 import { CodeMirrorEditor } from "@jupyterlab/codemirror";
-import { ICodeJumper } from "../jumpers/jumper";
+import { CodeJumper } from "../jumpers/jumper";
 import { IEditorExtension, KeyModifier } from "./editor";
 
 
@@ -11,10 +11,10 @@ const HANDLERS_ON = '_go_to_are_handlers_on';
 export class CodeMirrorExtension implements IEditorExtension {
 
   editor: CodeMirrorEditor;
-  jumper: ICodeJumper;
+  jumper: CodeJumper;
   static modifierKey: KeyModifier;
 
-  constructor(editor: CodeMirrorEditor, jumper: ICodeJumper) {
+  constructor(editor: CodeMirrorEditor, jumper: CodeJumper) {
     this.editor = editor;
     this.jumper = jumper;
   }

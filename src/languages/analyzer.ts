@@ -1,4 +1,3 @@
-import { Cell } from "@jupyterlab/cells";
 import { CodeEditor } from "@jupyterlab/codeeditor";
 import { IEditorExtension } from "../editors/editor";
 
@@ -32,7 +31,7 @@ export abstract class LanguageAnalyzer {
   abstract isTokenInSameAssignmentExpression(
     testedToken: CodeEditor.IToken,
     originToken: CodeEditor.IToken,
-    cell: Cell
+    editor: CodeEditor.IEditor
   ): boolean
 }
 

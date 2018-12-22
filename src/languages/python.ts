@@ -1,4 +1,3 @@
-import { Cell } from "@jupyterlab/cells";
 import { CodeEditor } from "@jupyterlab/codeeditor";
 import { LanguageAnalyzer } from "./analyzer";
 
@@ -137,7 +136,7 @@ export class PythonAnalyzer extends LanguageAnalyzer {
   isTokenInSameAssignmentExpression(
     testedToken: CodeEditor.IToken,
     originToken: CodeEditor.IToken,
-    cell: Cell
+    editor: CodeEditor.IEditor
   ): boolean {
     // Find tokens between token.offset and otherToken.offset.
     let tokensSet = new Set();
@@ -147,8 +146,8 @@ export class PythonAnalyzer extends LanguageAnalyzer {
       offset < originToken.offset + 1;
       offset++
     ) {
-      let position = cell.editor.getPositionAt(offset);
-      let token = cell.editor.getTokenForPosition(position);
+      let position = editor.getPositionAt(offset);
+      let token = editor.getTokenForPosition(position);
       if (token.offset === testedToken.offset) {
         continue;
       }
