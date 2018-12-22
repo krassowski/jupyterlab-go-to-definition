@@ -12,6 +12,9 @@ export class PythonAnalyzer extends LanguageAnalyzer {
 
   isDefinition(token: CodeEditor.IToken, i: number) {
 
+    if (!this.nameMatches(token))
+      return false;
+
     if (token.type === 'variable') {
       // Matching standalone variable assignment:
       let nextToken = _closestMeaningfulToken(i, this.tokens, +1);

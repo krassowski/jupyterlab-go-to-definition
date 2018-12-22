@@ -20,9 +20,8 @@ export abstract class LanguageAnalyzer {
   abstract isDefinition(token: CodeEditor.IToken, i: number): boolean
 
   getDefinitions() {
-    return Array.from(this.tokens).filter(
-      (token) => this.nameMatches(token)
-    ).filter(
+    return Array.from(this.tokens)
+    .filter(
       (token, i) => this.isDefinition(token, i)
     );
   }
