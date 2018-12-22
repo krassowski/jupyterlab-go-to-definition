@@ -25,16 +25,19 @@ export class NotebookJumper extends CodeJumper {
     return languageInfo.name;
   }
 
-  jump(jump: IJump) {
-    // Using `index = this._findCell(editor.host)` does not work,
-    // as the host editor has not switched to the clicked cell yet.
-    let index;
+  jump(jump: IJump, index?: number) {
 
-    // The mouse event is utilized to workaround Firefox's issue.
-    if (jump.mouseEvent !== undefined) {
-      index = _findTargetCell(this.notebook, jump.mouseEvent).index;
-    } else {
-      index = _findCell(this.notebook, jump.origin);
+    if (index === undefined)
+    {
+      // Using `index = this._findCell(editor.host)` does not work,
+      // as the host editor has not switched to the clicked cell yet.
+
+      // The mouse event is utilized to workaround Firefox's issue.
+      if (jump.mouseEvent !== undefined) {
+        index = _findTargetCell(this.notebook, jump.mouseEvent).index;
+      } else {
+        index = _findCell(this.notebook, jump.origin);
+      }
     }
 
     let {token, cellIndex} = this._findLastDefinition(jump.token, index);

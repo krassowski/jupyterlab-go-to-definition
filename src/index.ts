@@ -1,4 +1,5 @@
 import { JupyterLab, JupyterLabPlugin } from '@jupyterlab/application';
+import { ICommandPalette } from "@jupyterlab/apputils";
 import { INotebookTracker } from "@jupyterlab/notebook";
 import { CodeMirrorEditor } from '@jupyterlab/codemirror';
 import { IEditorTracker } from '@jupyterlab/fileeditor';
@@ -16,12 +17,13 @@ import { KeyModifier } from "./editors/editor";
  */
 const plugin: JupyterLabPlugin<void> = {
   id: 'jupyterlab_go_to_definition:plugin',
-  requires: [IEditorTracker, INotebookTracker, ISettingRegistry],
+  requires: [IEditorTracker, INotebookTracker, ISettingRegistry, ICommandPalette],
   activate: (
     app: JupyterLab,
     fileEditorTracker: IEditorTracker,
     notebookTracker: INotebookTracker,
-    settingRegistry: ISettingRegistry
+    settingRegistry: ISettingRegistry,
+    palette: ICommandPalette
   ) => {
 
     CodeMirrorExtension.configure();
@@ -99,6 +101,72 @@ const plugin: JupyterLabPlugin<void> = {
       .catch((reason: Error) => {
         console.error(reason.message);
       });
+
+    // Add an application command
+    const cmdIds = {
+      jumpNotebook: 'go-to-definition:notebook',
+      jumpFileEditor: 'go-to-definition:file-editor',
+    };
+
+    // Add the command to the palette.
+    palette.addItem({ command: cmdIds.jumpNotebook, category: 'Notebook Cell Operations' });
+    palette.addItem({ command: cmdIds.jumpFileEditor, category: 'Text Editor' });
+
+    function isEnabled(tracker: any) {
+      return (): boolean =>
+        tracker.currentWidget !== null
+        &&
+        tracker.currentWidget === app.shell.currentWidget
+    }
+
+    app.commands.addCommand(cmdIds.jumpNotebook, {
+      label: 'Jump to definition',
+      execute: () => {
+        let notebook = notebookTracker.currentWidget.content;
+
+        let jumper = new NotebookJumper(notebook);
+        let cell = notebook.activeCell;
+        let editor = cell.editor;
+
+        let position = editor.getCursorPosition();
+        let token = editor.getTokenForPosition(position);
+
+        jumper.jump({token, origin: null}, notebook.activeCellIndex)
+      },
+      isEnabled: isEnabled(notebookTracker)
+    });
+
+    app.commands.addCommand(cmdIds.jumpFileEditor, {
+      label: 'Jump to definition',
+      execute: () => {
+        let fileEditor = fileEditorTracker.currentWidget.content;
+
+        let jumper = new FileEditorJumper(fileEditor);
+        let editor = fileEditor.editor;
+
+        let position = editor.getCursorPosition();
+        let token = editor.getTokenForPosition(position);
+
+        jumper.jump({token, origin: null})
+      },
+      isEnabled: isEnabled(fileEditorTracker)
+    });
+
+    const bindings = [
+      {
+        selector: '.jp-Notebook.jp-mod-editMode',
+        keys: ['Ctrl Alt B'],
+        command: cmdIds.jumpNotebook
+      },
+      {
+        selector: '.jp-FileEditor',
+        keys: ['Ctrl Alt B'],
+        command: cmdIds.jumpFileEditor
+      },
+    ];
+
+
+    bindings.map(binding => app.commands.addKeyBinding(binding));
 
   },
   autoStart: true
