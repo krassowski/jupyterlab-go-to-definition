@@ -16,7 +16,7 @@ import { KeyModifier } from "./editors/editor";
  * The plugin registration information.
  */
 const plugin: JupyterLabPlugin<void> = {
-  id: 'jupyterlab_go_to_definition:plugin',
+  id: '@krassowski/jupyterlab_go_to_definition:plugin',
   requires: [IEditorTracker, INotebookTracker, ISettingRegistry, ICommandPalette],
   activate: (
     app: JupyterLab,
