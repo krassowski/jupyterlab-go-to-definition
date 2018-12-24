@@ -57,50 +57,9 @@ export class PythonAnalyzer extends LanguageAnalyzer {
         return true;
       }
 
-      // Matching variables in tuple unpacking:
-
-      // Considering: `a, [b, c], (d, ) = 1, [1, 2], (1,)`, if the tested
-      // token is `a`, then the next expected token would be a comma,
-      // and then one of following: a variable, an assignment symbol,
-      // or an opening bracket (for simplicity brackets can be ignored).
-      let commaExpected = true;
-
-      let indexShift = 1;
-
-      // here `nextToken` is any token, not necessarily a meaningful one
-      nextToken = this.tokens[i + 1];
-
-      // unpacking with curly braces is not possible
-      const openingBrackets = '([';
-      const closingBrackets = ')]';
-      let openedBrackets = 0;
-
-      // value of token is equal to an empty string for line breaks
-
-      // a line break is the latest when the search should terminate,
-      // unless the left-hand tuple is spread over several lines (in brackets)
-      while (nextToken && (nextToken.value !== '' || openedBrackets > 0)) {
-        if (nextToken.value === '') {
-          // ignoring new-lines (when within brackets)
-        } else if (openingBrackets.includes(nextToken.value)) {
-          openedBrackets += 1;
-        } else if (closingBrackets.includes(nextToken.value)) {
-          openedBrackets -= 1;
-        } else if (nextToken.value === ' ' || nextToken.value === '\t') {
-          // ignoring whitespaces
-        } else {
-          if (nextToken.type === 'operator' && nextToken.value === '=') {
-            return true;
-          }
-
-          if (commaExpected && nextToken.value !== ',') {
-            break;
-          }
-
-          commaExpected = !commaExpected;
-        }
-        indexShift += 1;
-        nextToken = this.tokens[i + indexShift];
+      if (this._isTupleUnpacking(i))
+      {
+        return true;
       }
 
       // nothing matched
@@ -115,6 +74,56 @@ export class PythonAnalyzer extends LanguageAnalyzer {
       // nothing matched
       return false;
     }
+  }
+
+  _isTupleUnpacking(i: number) {
+    // Matching variables in tuple unpacking:
+
+    // Considering: `a, [b, c], (d, ) = 1, [1, 2], (1,)`, if the tested
+    // token is `a`, then the next expected token would be a comma,
+    // and then one of following: a variable, an assignment symbol,
+    // or an opening bracket (for simplicity brackets can be ignored).
+    let commaExpected = true;
+
+    let indexShift = 1;
+
+    // here `nextToken` is any token, not necessarily a meaningful one
+    let nextToken = this.tokens[i + 1];
+
+    // unpacking with curly braces is not possible
+    const openingBrackets = '([';
+    const closingBrackets = ')]';
+    let openedBrackets = 0;
+
+    // value of token is equal to an empty string for line breaks
+
+    // a line break is the latest when the search should terminate,
+    // unless the left-hand tuple is spread over several lines (in brackets)
+    while (nextToken && (nextToken.value !== '' || openedBrackets > 0)) {
+      if (nextToken.value === '') {
+        // ignoring new-lines (when within brackets)
+      } else if (openingBrackets.includes(nextToken.value)) {
+        openedBrackets += 1;
+      } else if (closingBrackets.includes(nextToken.value)) {
+        openedBrackets -= 1;
+      } else if (nextToken.value === ' ' || nextToken.value === '\t') {
+        // ignoring whitespaces
+      } else {
+        if (nextToken.type === 'operator' && nextToken.value === '=') {
+          return true;
+        }
+
+        if (commaExpected && nextToken.value !== ',') {
+          break;
+        }
+
+        commaExpected = !commaExpected;
+      }
+      indexShift += 1;
+      nextToken = this.tokens[i + indexShift];
+    }
+
+    return false;
   }
 
   /**
@@ -168,12 +177,27 @@ export class PythonAnalyzer extends LanguageAnalyzer {
     )[0];
 
     // Select terminating tokens:
+    let terminatingTokens = this._selectTerminatingTokens(tokensBetween);
+
+    let terminatorsAfterAssignment = terminatingTokens.filter(
+      token => token.offset > firstAssignment.offset
+    );
+
+    if (!terminatorsAfterAssignment.length) {
+      return true;
+    }
+
+    return false;
+  }
+
+  _selectTerminatingTokens(tokens: Array<CodeEditor.IToken>) {
+    // terminating tokens are:
     // semicolons and new lines (which are locally outside of brackets)
     let terminatingTokens = [];
     let openedBrackets = 0;
     const openingBrackets = '([{';
     const closingBrackets = ')]}';
-    for (let token of tokensBetween) {
+    for (let token of tokens) {
       // let's assume that the code is properly formatted,
       // and do not check the order of brackets
       if (token.value !== '') {
@@ -193,16 +217,7 @@ export class PythonAnalyzer extends LanguageAnalyzer {
         terminatingTokens.push(token);
       }
     }
-
-    let terminatorsAfterAssignment = terminatingTokens.filter(
-      token => token.offset > firstAssignment.offset
-    );
-
-    if (!terminatorsAfterAssignment.length) {
-      return true;
-    }
-
-    return false;
+    return tokens;
   }
 
 }
