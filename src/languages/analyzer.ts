@@ -1,27 +1,32 @@
 import { CodeEditor } from "@jupyterlab/codeeditor";
-import { IEditorExtension } from "../editors/editor";
+
+import { ITokensProvider } from "../editors/editor";
+
 
 export abstract class LanguageAnalyzer {
 
   tokens: Array<CodeEditor.IToken>;
+  tokensProvider: ITokensProvider;
   /**
    * Name of a variable for which a definition is sought
    */
-  name: string;
 
-  constructor(editor: IEditorExtension, name: string) {
-    this.tokens = editor.getTokens();
-    this.name = name;
+  constructor(tokensProvider: ITokensProvider) {
+    this.tokensProvider = tokensProvider;
   }
-
-  abstract nameMatches(token: CodeEditor.IToken): boolean
 
   abstract isDefinition(token: CodeEditor.IToken, i: number): boolean
 
-  getDefinitions() {
+  nameMatches(name: string, token: CodeEditor.IToken) {
+    return token.value === name;
+  }
+
+  getDefinitions(variable: string) {
+    this.tokens = this.tokensProvider.getTokens();
+
     return Array.from(this.tokens)
     .filter(
-      (token, i) => this.isDefinition(token, i)
+      (token, i) => this.nameMatches(variable, token) && this.isDefinition(token, i)
     );
   }
 
@@ -30,8 +35,26 @@ export abstract class LanguageAnalyzer {
    */
   abstract isTokenInSameAssignmentExpression(
     testedToken: CodeEditor.IToken,
-    originToken: CodeEditor.IToken,
-    editor: CodeEditor.IEditor
+    originToken: CodeEditor.IToken
   ): boolean
+
 }
 
+export function _closestMeaningfulToken(
+  tokenIndex: number,
+  tokens: Array<CodeEditor.IToken>,
+  direction: number
+): CodeEditor.IToken {
+  let nextMeaningfulToken = null;
+  while (nextMeaningfulToken == null) {
+    tokenIndex += direction;
+    if (tokenIndex < 0 || tokenIndex >= tokens.length) {
+      return null;
+    }
+    let nextToken = tokens[tokenIndex];
+    if (nextToken.type !== '') {
+      nextMeaningfulToken = nextToken;
+    }
+  }
+  return nextMeaningfulToken;
+}

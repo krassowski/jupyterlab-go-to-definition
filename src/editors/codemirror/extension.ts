@@ -1,21 +1,21 @@
 import CodeMirror from "codemirror";
 
 import { CodeMirrorEditor } from "@jupyterlab/codemirror";
-import { CodeJumper } from "../jumpers/jumper";
-import { IEditorExtension, KeyModifier } from "./editor";
+import { CodeJumper } from "../../jumpers/jumper";
+import { IEditorExtension, KeyModifier } from "../editor";
+import { CodeMirrorTokensProvider } from "./tokens";
 
 
 const HANDLERS_ON = '_go_to_are_handlers_on';
 
 
-export class CodeMirrorExtension implements IEditorExtension {
+export class CodeMirrorExtension extends CodeMirrorTokensProvider implements IEditorExtension {
 
-  editor: CodeMirrorEditor;
   jumper: CodeJumper;
   static modifierKey: KeyModifier;
 
   constructor(editor: CodeMirrorEditor, jumper: CodeJumper) {
-    this.editor = editor;
+    super(editor);
     this.jumper = jumper;
   }
 
@@ -24,10 +24,6 @@ export class CodeMirrorExtension implements IEditorExtension {
     // has been assigned with a handler
     CodeMirror.defineOption(HANDLERS_ON, false, () => {
     });
-  }
-
-  getTokens() {
-    return this.editor.getTokens()
   }
 
   connect() {

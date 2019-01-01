@@ -1,65 +1,92 @@
 import { CodeEditor } from "@jupyterlab/codeeditor";
-import { LanguageAnalyzer } from "./analyzer";
+import { _closestMeaningfulToken, LanguageAnalyzer } from "./analyzer";
+
+
+export interface IMeaningfulSiblings {
+  next: CodeEditor.IToken,
+  previous: CodeEditor.IToken,
+}
+
+
+type RuleFunction = (
+  siblings: IMeaningfulSiblings,
+  tokens?: ReadonlyArray<CodeEditor.IToken>,
+  position?: number
+) => boolean;
 
 
 // Many of the characteristics could be moved to a new parent class "CLikeLanguageAnalyzer"
 export class PythonAnalyzer extends LanguageAnalyzer {
 
-  nameMatches(token: CodeEditor.IToken) {
-    return token.value === this.name;
+  // idea for improvement:
+  //  rename Analyzer to RuleTester, define class Rule, make Rule instances take a callback on init,
+  //  possibly add a string with rule's name (it could be displayed as "defined in >for< loop, line 9",
+  //  or "imported from xyz module" and in case of multiple hits, user could choose which one to jump to),
+  //  and make the rules interface the way to go for other languages.
+  definitionRules = [
+    this.isStandaloneAssignment,
+    this.isImport,
+    this.isWithStatement,
+    this.isForLoopOrComprehension,
+    this.isTupleUnpacking
+  ];
+
+  // Matching standalone variable assignment:
+  isStandaloneAssignment(siblings: IMeaningfulSiblings) {
+    return (
+      siblings.next &&
+      siblings.next.type === 'operator' &&
+      siblings.next.value === '='
+    )
   }
 
+  // Matching imports:
+  isImport(siblings: IMeaningfulSiblings) {
+    return (
+      siblings.previous &&
+      siblings.previous.type === 'keyword' &&
+      siblings.previous.value === 'import'
+    )
+  }
+
+  // Matching `as`:
+  // e.g. `with open('name') as f:` or `except Exception as e:`
+  isWithStatement(siblings: IMeaningfulSiblings) {
+    return (
+      siblings.previous &&
+      siblings.previous.type === 'keyword' &&
+      siblings.previous.value === 'as'
+    )
+  }
+
+  // Matching `for` loop and comprehensions:
+  isForLoopOrComprehension(siblings: IMeaningfulSiblings) {
+    let { previous, next } = siblings;
+    return (
+      previous &&
+      previous.type === 'keyword' &&
+      previous.value === 'for' &&
+      next &&
+      next.type === 'keyword' &&
+      next.value === 'in'
+    )
+  }
+
+  // should be tested with jest
   isDefinition(token: CodeEditor.IToken, i: number) {
 
-    if (!this.nameMatches(token))
-      return false;
-
     if (token.type === 'variable') {
-      // Matching standalone variable assignment:
-      let nextToken = _closestMeaningfulToken(i, this.tokens, +1);
-      if (
-        nextToken &&
-        nextToken.type === 'operator' &&
-        nextToken.value === '='
-      ) {
-        return true;
-      }
 
-      // Matching imports:
-      let previousToken = _closestMeaningfulToken(i, this.tokens, -1);
-      if (
-        previousToken &&
-        previousToken.type === 'keyword' &&
-        previousToken.value === 'import'
-      ) {
-        return true;
-      }
+      let siblings = {
+        next: _closestMeaningfulToken(i, this.tokens, +1),
+        previous: _closestMeaningfulToken(i, this.tokens, -1)
+      };
+      let isVariableDefinition: RuleFunction;
 
-      // Matching `as`:
-      // e.g. `with open('name') as f:` or `except Exception as e:`
-      if (
-        previousToken &&
-        previousToken.type === 'keyword' &&
-        previousToken.value === 'as'
-      ) {
-        return true;
-      }
-
-      // Matching `for` loop and comprehensions:
-      if (
-        previousToken &&
-        previousToken.type === 'keyword' &&
-        previousToken.value === 'for' &&
-        nextToken &&
-        nextToken.type === 'keyword' &&
-        nextToken.value === 'in'
-      ) {
-        return true;
-      }
-
-      if (this._isTupleUnpacking(i))
-      {
-        return true;
+      for (isVariableDefinition of this.definitionRules) {
+        if (isVariableDefinition(siblings, this.tokens, i)) {
+          return true;
+        }
       }
 
       // nothing matched
@@ -76,7 +103,7 @@ export class PythonAnalyzer extends LanguageAnalyzer {
     }
   }
 
-  _isTupleUnpacking(i: number) {
+  isTupleUnpacking(siblings: IMeaningfulSiblings, tokens: ReadonlyArray<CodeEditor.IToken>, i: number) {
     // Matching variables in tuple unpacking:
 
     // Considering: `a, [b, c], (d, ) = 1, [1, 2], (1,)`, if the tested
@@ -88,7 +115,7 @@ export class PythonAnalyzer extends LanguageAnalyzer {
     let indexShift = 1;
 
     // here `nextToken` is any token, not necessarily a meaningful one
-    let nextToken = this.tokens[i + 1];
+    let nextToken = tokens[i + 1];
 
     // unpacking with curly braces is not possible
     const openingBrackets = '([';
@@ -120,7 +147,7 @@ export class PythonAnalyzer extends LanguageAnalyzer {
         commaExpected = !commaExpected;
       }
       indexShift += 1;
-      nextToken = this.tokens[i + indexShift];
+      nextToken = tokens[i + indexShift];
     }
 
     return false;
@@ -144,8 +171,7 @@ export class PythonAnalyzer extends LanguageAnalyzer {
    */
   isTokenInSameAssignmentExpression(
     testedToken: CodeEditor.IToken,
-    originToken: CodeEditor.IToken,
-    editor: CodeEditor.IEditor
+    originToken: CodeEditor.IToken
   ): boolean {
     // Find tokens between token.offset and otherToken.offset.
     let tokensSet = new Set();
@@ -155,8 +181,7 @@ export class PythonAnalyzer extends LanguageAnalyzer {
       offset < originToken.offset + 1;
       offset++
     ) {
-      let position = editor.getPositionAt(offset);
-      let token = editor.getTokenForPosition(position);
+      let token = this.tokensProvider.getTokenAt(offset);
       if (token.offset === testedToken.offset) {
         continue;
       }
@@ -220,23 +245,4 @@ export class PythonAnalyzer extends LanguageAnalyzer {
     return tokens;
   }
 
-}
-
-function _closestMeaningfulToken(
-  tokenIndex: number,
-  tokens: Array<CodeEditor.IToken>,
-  direction: number
-): CodeEditor.IToken {
-  let nextMeaningfulToken = null;
-  while (nextMeaningfulToken == null) {
-    tokenIndex += direction;
-    if (tokenIndex < 0 || tokenIndex >= tokens.length) {
-      return null;
-    }
-    let nextToken = tokens[tokenIndex];
-    if (nextToken.type !== '') {
-      nextMeaningfulToken = nextToken;
-    }
-  }
-  return nextMeaningfulToken;
 }

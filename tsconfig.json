@@ -12,7 +12,7 @@
     "strictNullChecks": false,
     "esModuleInterop": true,
     "target": "es2015",
-    "types": []
+    "types": ["jest"]
   },
   "include": ["src/*", "src/editors/*", "src/jumpers/*", "src/languages/*"]
 }

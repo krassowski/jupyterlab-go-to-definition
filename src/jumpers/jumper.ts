@@ -25,15 +25,16 @@ export abstract class CodeJumper {
     for (let i = 0; i <= stopIndex; i++) {
       let cell_editor = this.editors[i];
 
+      // TODO: if a cell starts with %%[language] magic, use the other language?
       let analyzerClass = chooseLanguageAnalyzer(this.language);
 
       // TODO: make this dynamic, depending on editor implementation in use (like with languages)
       let editor = new CodeMirrorExtension(cell_editor as CodeMirrorEditor, this);
 
-      let analyzer = new analyzerClass(editor, token.value);
+      let analyzer = new analyzerClass(editor);
 
       // try to find variable assignment
-      let definitions = analyzer.getDefinitions();
+      let definitions = analyzer.getDefinitions(token.value);
 
 
       if (definitions.length) {
@@ -55,7 +56,7 @@ export abstract class CodeJumper {
             return true;
           }
           return !analyzer.isTokenInSameAssignmentExpression(
-            otherToken, token, cell_editor
+            otherToken, token
           );
         });
 

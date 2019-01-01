@@ -2,7 +2,17 @@ import { CodeEditor } from "@jupyterlab/codeeditor";
 
 export type KeyModifier = 'Alt' | 'Control' | 'Shift' | 'Meta' | 'AltGraph';
 
-export interface IEditorExtension {
+
+export interface ITokensProvider {
+
+  getTokens(): Array<CodeEditor.IToken>;
+
+  getTokenAt(offset: number): CodeEditor.IToken;
+
+}
+
+
+export interface IEditorExtension extends ITokensProvider {
 
   editor: CodeEditor.IEditor;
 
@@ -10,5 +20,4 @@ export interface IEditorExtension {
 
   connect(modifierKey: KeyModifier): void;
 
-  getTokens(): Array<CodeEditor.IToken>;
 }

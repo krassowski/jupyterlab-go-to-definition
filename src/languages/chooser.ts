@@ -4,7 +4,7 @@ import { IEditorExtension } from "../editors/editor";
 
 
 export interface LanguageAnalyzerConstructor {
-    new(editor: IEditorExtension, name: string): LanguageAnalyzer;
+    new(editor: IEditorExtension): LanguageAnalyzer;
 }
 
 
