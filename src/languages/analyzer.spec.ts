@@ -4,7 +4,7 @@ import { CodeEditor } from "@jupyterlab/codeeditor";
 
 import { ITokensProvider } from "../editors/editor";
 
-import { LanguageAnalyzer } from "./analyzer";
+import { LanguageWithOptionalSemicolons, RuleFunction } from "./analyzer";
 
 
 class TextBasedTokensProvider implements ITokensProvider {
@@ -27,11 +27,9 @@ class TextBasedTokensProvider implements ITokensProvider {
 }
 
 
-class TestLanguageAnalyzer extends LanguageAnalyzer {
+class TestLanguageAnalyzer extends LanguageWithOptionalSemicolons {
 
-  isDefinition(token: CodeEditor.IToken, i: number): boolean {
-    return true;
-  }
+  definitionRules: Array<RuleFunction> = [];
 
   isTokenInSameAssignmentExpression(testedToken: CodeEditor.IToken, originToken: CodeEditor.IToken): boolean {
     return false;

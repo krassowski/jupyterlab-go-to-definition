@@ -11,9 +11,22 @@ export class FileEditorJumper extends CodeJumper {
   constructor(editor: FileEditor) {
     super();
     this.editor = editor;
-    // TODO: language detection
-    // editor.context.session.kernel.getSpec().then((spec) => {this.language = spec.language;});
-    this.language = 'python'
+    this.setLanguageFromMime(editor.model.mimeType);
+
+    editor.model.mimeTypeChanged.connect((session, mimeChanged) => {
+      this.setLanguageFromMime(mimeChanged.newValue)
+    });
+  }
+
+  setLanguageFromMime(mime: string){
+    let type = mime.replace('text/x-', '');
+    switch (type) {
+      case 'rsrc':
+        this.language = 'R';
+        break;
+      default:
+        this.language = type;
+    }
   }
 
   get editors() {
