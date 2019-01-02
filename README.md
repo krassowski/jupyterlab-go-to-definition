@@ -10,7 +10,8 @@ Use <kbd>Alt</kbd> + <kbd>click</kbd> to jump to a definition using your mouse, 
 
 You can replace the key modifier for mouse click from <kbd>Alt</kbd> to <kbd>Control</kbd>, <kbd>Shift</kbd>, <kbd>Meta</kbd> or <kbd>AltGraph</kbd> in the settings.
 
-The plugin is language-agnostic, though optimized for Python. Better support for other languages is planned (PRs welcome).
+The plugin is language-agnostic, though optimized for Python. Initial support for R was recently implemented.
+Support for other languages is possible (PRs welcome).
 
 ## Prerequisites
 
@@ -39,3 +40,14 @@ npm run build
 jupyter lab build
 ```
 
+To run tests suite:
+
+```bash
+npm test
+```
+
+### Adding support for additional lanugages
+
+Support for new languages should be provided by implementation of abstract `LanguageAnalyzer` class (in case of languages which support use of semicolons to terminate statements `LanguageWithOptionalSemicolons` helper class can be utilized).
+
+Each new lanaguege class needs to be included in `chooseLanguageAnalyzer` function and the developer needs to verify if `setLanguageFromMime` in `fileeditor.ts` will be able to recognize the language properly.
