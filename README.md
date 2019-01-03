@@ -6,7 +6,7 @@ Jump to definition of a variable or function in JupyterLab notebook and file edi
 
 Use <kbd>Alt</kbd> + <kbd>click</kbd> to jump to a definition using your mouse, or <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>B</kbd> keyboard-only alternative.
 
-![Go to definition](https://user-images.githubusercontent.com/5832902/47969769-616a8880-e074-11e8-9da3-6aed3ff9182a.gif)
+![Go to definition](https://raw.githubusercontent.com/krassowski/jupyterlab-go-to-definition/master/examples/demo.gif)
 
 You can replace the key modifier for mouse click from <kbd>Alt</kbd> to <kbd>Control</kbd>, <kbd>Shift</kbd>, <kbd>Meta</kbd> or <kbd>AltGraph</kbd> in the settings.
 
