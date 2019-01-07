@@ -167,7 +167,7 @@ export abstract class LanguageWithOptionalSemicolons extends LanguageAnalyzer {
         terminatingTokens.push(token);
       }
     }
-    return tokens;
+    return terminatingTokens;
   }
 
 }

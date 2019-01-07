@@ -5,8 +5,16 @@ import { CodeMirrorEditor } from '@jupyterlab/codemirror';
 
 import { CodeMirrorTokensProvider } from "../editors/codemirror/tokens";
 
-import { _closestMeaningfulToken } from "./analyzer";
+import { _closestMeaningfulToken, RuleFunction } from "./analyzer";
 import { PythonAnalyzer } from './python';
+import { CodeJumper } from "../jumpers/jumper";
+import { IJump } from '../jump';
+
+
+function matchToken(tokens: ReadonlyArray<CodeEditor.IToken>, tokenName: string, tokenOccurrence = 1, tokenType = 'variable'): CodeEditor.IToken{
+  let matchedTokens = tokens.filter(token => token.value == tokenName && token.type == tokenType);
+  return matchedTokens[tokenOccurrence - 1]
+}
 
 
 describe('PythonAnalyzer', () => {
@@ -16,24 +24,23 @@ describe('PythonAnalyzer', () => {
   let model: CodeEditor.Model;
   let host: HTMLElement;
 
-  function tokenNeighbourhood(tokenName: string, tokenOccurrence=1, tokenType='variable') {
+  function runWithSelectedToken(method: RuleFunction, tokenName: string, tokenOccurrence = 1, tokenType = 'variable') {
     let tokens = tokensProvider.getTokens();
-    let matchedTokens = tokens.filter(token => token.value == tokenName && token.type == tokenType);
-    let token = matchedTokens[tokenOccurrence - 1];
+    let token = matchToken(tokens, tokenName, tokenOccurrence, tokenType);
     let tokenId = tokens.indexOf(token);
 
-    return {
+    return method.bind(analyzer)({
       next: _closestMeaningfulToken(tokenId, tokens, +1),
       previous: _closestMeaningfulToken(tokenId, tokens, -1)
-    };
+    }, tokens, tokenId);
   }
 
   beforeEach(() => {
     host = document.createElement('div');
     document.body.appendChild(host);
 
-    model = new CodeEditor.Model({ mimeType: 'text/x-python' });
-    editor = new CodeMirrorEditor({ host, model, config: {mode: 'python'} });
+    model = new CodeEditor.Model({mimeType: 'text/x-python'});
+    editor = new CodeMirrorEditor({host, model, config: {mode: 'python'}});
     tokensProvider = new CodeMirrorTokensProvider(editor);
     analyzer = new PythonAnalyzer(tokensProvider);
 
@@ -48,35 +55,178 @@ describe('PythonAnalyzer', () => {
 
     it('should recognize assignments', () => {
       model.value.text = 'x = 1';
-      expect(analyzer.isStandaloneAssignment(tokenNeighbourhood('x'))).to.be.true
+      expect(runWithSelectedToken(analyzer.isStandaloneAssignment, 'x')).to.be.true;
     });
 
     it('should ignore increments', () => {
       model.value.text = 'x += 1';
-      expect(analyzer.isStandaloneAssignment(tokenNeighbourhood('x'))).to.be.false
-    })
+      expect(runWithSelectedToken(analyzer.isStandaloneAssignment, 'x')).to.be.false;
+    });
+  });
+
+  describe('#isTupleUnpacking', () => {
+    it('should recognize simple tuples', () => {
+      model.value.text = 'a, b = 1, 2';
+      expect(runWithSelectedToken(analyzer.isTupleUnpacking, 'a')).to.be.true;
+      expect(runWithSelectedToken(analyzer.isTupleUnpacking, 'b')).to.be.true;
+    });
+
+    it('should handle brackets', () => {
+      const cases = [
+        'x, (y, z) = a, [b, c]',
+        'x, (y, z) = a, (b, c)',
+        '(x, y), z = (a, b), c',
+        '(x, y), z = [a, b], c',
+      ];
+
+      for (let testCase of cases) {
+        model.value.text = testCase;
+
+        for (let definition of ['x', 'y', 'z']) {
+          expect(runWithSelectedToken(analyzer.isTupleUnpacking, definition)).to.be.true;
+        }
+
+        for (let usage of ['a', 'b', 'c']) {
+          expect(runWithSelectedToken(analyzer.isTupleUnpacking, usage)).to.be.false;
+        }
+      }
+    });
+
+    it('should not be mistaken with a simple function call', () => {
+      model.value.text = 'x = y(a, b, c=1)';
+      for (let notATupleMember of ['a', 'b', 'c', 'y']) {
+        expect(runWithSelectedToken(analyzer.isTupleUnpacking, notATupleMember)).to.be.false;
+      }
+
+      // this is a very trivial tuple with just one member
+      expect(runWithSelectedToken(analyzer.isTupleUnpacking, 'x')).to.be.true;
+
+    });
+
+    it('should not be mistaken with a complex function call', () => {
+      model.value.text = 'x = y(a, b, c=(1, 2), d=[(1, 3)], e={})';
+      for (let notATupleMember of ['a', 'b', 'c', 'd', 'e', 'y']) {
+        expect(runWithSelectedToken(analyzer.isTupleUnpacking, notATupleMember)).to.be.false;
+      }
+
+      // see above
+      expect(runWithSelectedToken(analyzer.isTupleUnpacking, 'x')).to.be.true;
+    });
+
   });
 
   describe('#isForLoopOrComprehension', () => {
 
     it('should recognize variables declared inside of loops', () => {
       model.value.text = 'for x in range(10): pass';
-      expect(analyzer.isForLoopOrComprehension(tokenNeighbourhood('x'))).to.be.true;
+      expect(runWithSelectedToken(analyzer.isForLoopOrComprehension, 'x')).to.be.true;
     });
 
     it('should recognize list and set comprehensions', () => {
       // list
       model.value.text = '[x for x in range(10)]';
-      expect(analyzer.isForLoopOrComprehension(tokenNeighbourhood('x', 2))).to.be.true;
+      expect(runWithSelectedToken(analyzer.isForLoopOrComprehension, 'x', 2)).to.be.true;
 
       // with new lines
       model.value.text = '[\nx\nfor x in range(10)\n]';
-      expect(analyzer.isForLoopOrComprehension(tokenNeighbourhood('x', 2))).to.be.true;
+      expect(runWithSelectedToken(analyzer.isForLoopOrComprehension, 'x', 2)).to.be.true;
 
       // set
       model.value.text = '{x for x in range(10)}';
-      expect(analyzer.isForLoopOrComprehension(tokenNeighbourhood('x', 2))).to.be.true;
+      expect(runWithSelectedToken(analyzer.isForLoopOrComprehension, 'x', 2)).to.be.true;
     });
 
-  })
+  });
+});
+
+
+class Jumper extends CodeJumper {
+  language: string = 'python';
+  editor: CodeEditor.IEditor;
+
+  constructor(editor: CodeEditor.IEditor) {
+    super();
+    this.editor = editor;
+  }
+
+  get editors() {
+    return [this.editor];
+  }
+
+  jump(jump: IJump) {
+    let {token} = this._findLastDefinition(jump.token, 0);
+
+    // nothing found
+    if (!token) {
+      return;
+    }
+
+    let position = this.editor.getPositionAt(token.offset);
+    this.editor.setSelection({start: position, end: position});
+  }
+}
+
+describe('Jumper with PythonAnalyzer', () => {
+  let editor: CodeMirrorEditor;
+  let tokensProvider: CodeMirrorTokensProvider;
+  let model: CodeEditor.Model;
+  let host: HTMLElement;
+  let jumper: Jumper;
+
+  beforeEach(() => {
+    host = document.createElement('div');
+    document.body.appendChild(host);
+
+    model = new CodeEditor.Model({mimeType: 'text/x-python'});
+    editor = new CodeMirrorEditor({host, model, config: {mode: 'python'}});
+    tokensProvider = new CodeMirrorTokensProvider(editor);
+
+    jumper = new Jumper(editor);
+  });
+
+  afterEach(() => {
+    editor.dispose();
+    document.body.removeChild(host);
+  });
+
+  describe('Jumper', () => {
+
+    it('should handle simple jumps', () => {
+      model.value.text = 'a = 1\nx = a';
+
+      let tokens = tokensProvider.getTokens();
+      let token = matchToken(tokens, 'a', 2);
+
+      let firstAPosition = {line: 0, column: 0};
+      let secondAPosition = {line: 1, column: 5};
+      editor.setCursorPosition(secondAPosition);
+
+      expect(editor.getCursorPosition()).to.deep.equal(secondAPosition);
+      expect(editor.getTokenForPosition(secondAPosition)).to.deep.equal(token);
+
+      jumper.jump({token: token, origin: null, mouseEvent: null});
+
+      expect(editor.getCursorPosition()).to.deep.equal(firstAPosition);
+    });
+
+    it('handles variable usage inside definitions overriding the same variable', () => {
+      model.value.text = 'a = 1\na = a + 1';
+
+      let tokens = tokensProvider.getTokens();
+      let token = matchToken(tokens, 'a', 3);
+
+      let firstAPosition = {line: 0, column: 0};
+      let thirdAPosition = {line: 1, column: 5};
+      editor.setCursorPosition(thirdAPosition);
+
+      expect(editor.getCursorPosition()).to.deep.equal(thirdAPosition);
+      expect(editor.getTokenForPosition(thirdAPosition)).to.deep.equal(token);
+
+      jumper.jump({token: token, origin: null, mouseEvent: null});
+
+      expect(editor.getCursorPosition()).to.deep.equal(firstAPosition);
+
+    });
+
+  });
 });

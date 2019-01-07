@@ -1,5 +1,43 @@
 import { CodeEditor } from "@jupyterlab/codeeditor";
 import { LanguageWithOptionalSemicolons, IMeaningfulSiblings } from "./analyzer";
+import IToken = CodeEditor.IToken;
+
+
+function evaluateSkippingBrackets(tokens: ReadonlyArray<IToken>, indexShift: number, callback: Function, allowNegativeBrackets=false){
+
+  // here `nextToken` is any token, not necessarily a meaningful one
+  let nextToken = tokens[indexShift];
+
+  // unpacking with curly braces is not possible
+  const openingBrackets = '([';
+  const closingBrackets = ')]';
+  let openedBrackets = 0;
+
+  // value of token is equal to an empty string for line breaks
+
+  // a line break is the latest when the search should terminate,
+  // unless the left-hand tuple is spread over several lines (in brackets)
+  while (nextToken && (nextToken.value !== '' || openedBrackets > 0)) {
+    if (nextToken.value === '') {
+      // ignoring new-lines (when within brackets)
+    } else if (openingBrackets.includes(nextToken.value)) {
+      openedBrackets += 1;
+    } else if (closingBrackets.includes(nextToken.value) && (allowNegativeBrackets || openedBrackets > 0)) {
+      openedBrackets -= 1;
+    } else if (nextToken.value === ' ' || nextToken.value === '\t') {
+      // ignoring whitespaces
+    } else {
+      let result = callback(nextToken, indexShift);
+      if (result !== undefined)
+        return result;
+    }
+    indexShift += 1;
+    nextToken = tokens[indexShift];
+  }
+
+  return false;
+
+}
 
 
 export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
@@ -66,45 +104,28 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
     // or an opening bracket (for simplicity brackets can be ignored).
     let commaExpected = true;
 
-    let indexShift = 1;
+    return evaluateSkippingBrackets(tokens, i + 1, (nextToken: IToken, indexShift: number) => {
 
-    // here `nextToken` is any token, not necessarily a meaningful one
-    let nextToken = tokens[i + 1];
+      if (nextToken.type === 'operator' && nextToken.value === '=') {
 
-    // unpacking with curly braces is not possible
-    const openingBrackets = '([';
-    const closingBrackets = ')]';
-    let openedBrackets = 0;
+        let lastToken: IToken;
 
-    // value of token is equal to an empty string for line breaks
+        evaluateSkippingBrackets(tokens, indexShift + 1, (nextToken: IToken) => {
+          lastToken = nextToken
+        });
 
-    // a line break is the latest when the search should terminate,
-    // unless the left-hand tuple is spread over several lines (in brackets)
-    while (nextToken && (nextToken.value !== '' || openedBrackets > 0)) {
-      if (nextToken.value === '') {
-        // ignoring new-lines (when within brackets)
-      } else if (openingBrackets.includes(nextToken.value)) {
-        openedBrackets += 1;
-      } else if (closingBrackets.includes(nextToken.value)) {
-        openedBrackets -= 1;
-      } else if (nextToken.value === ' ' || nextToken.value === '\t') {
-        // ignoring whitespaces
-      } else {
-        if (nextToken.type === 'operator' && nextToken.value === '=') {
+        // return true unless in a function call
+        if ((!lastToken || lastToken.value !== ')'))
           return true;
-        }
 
-        if (commaExpected && nextToken.value !== ',') {
-          break;
-        }
-
-        commaExpected = !commaExpected;
       }
-      indexShift += 1;
-      nextToken = tokens[i + indexShift];
-    }
 
-    return false;
+      if (commaExpected && nextToken.value !== ',') {
+        return false
+      }
+
+      commaExpected = !commaExpected;
+    }, true);
+
   }
-
 }
