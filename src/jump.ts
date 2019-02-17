@@ -17,3 +17,15 @@ export interface IJump {
    */
   mouseEvent?: MouseEvent;
 }
+
+
+export interface IJumpPosition {
+  /**
+   * The token of origin (variable/function usage).
+   */
+  token: CodeEditor.IToken;
+  /**
+   * Optional number identifying the cell in a notebook
+   */
+  index?: number;
+}

@@ -153,7 +153,7 @@ class Jumper extends CodeJumper {
     return [this.editor];
   }
 
-  jump(jump: IJump) {
+  jump_to_definition(jump: IJump) {
     let {token} = this._findLastDefinition(jump.token, 0);
 
     // nothing found
@@ -204,7 +204,7 @@ describe('Jumper with PythonAnalyzer', () => {
       expect(editor.getCursorPosition()).to.deep.equal(secondAPosition);
       expect(editor.getTokenForPosition(secondAPosition)).to.deep.equal(token);
 
-      jumper.jump({token: token, origin: null, mouseEvent: null});
+      jumper.jump_to_definition({token: token, origin: null, mouseEvent: null});
 
       expect(editor.getCursorPosition()).to.deep.equal(firstAPosition);
     });
@@ -222,7 +222,7 @@ describe('Jumper with PythonAnalyzer', () => {
       expect(editor.getCursorPosition()).to.deep.equal(thirdAPosition);
       expect(editor.getTokenForPosition(thirdAPosition)).to.deep.equal(token);
 
-      jumper.jump({token: token, origin: null, mouseEvent: null});
+      jumper.jump_to_definition({token: token, origin: null, mouseEvent: null});
 
       expect(editor.getCursorPosition()).to.deep.equal(firstAPosition);
 

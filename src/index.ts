@@ -3,13 +3,14 @@ import { ICommandPalette } from "@jupyterlab/apputils";
 import { INotebookTracker } from "@jupyterlab/notebook";
 import { CodeMirrorEditor } from '@jupyterlab/codemirror';
 import { IEditorTracker } from '@jupyterlab/fileeditor';
-import { ISettingRegistry } from '@jupyterlab/coreutils'
+import { ISettingRegistry } from '@jupyterlab/coreutils';
 
 import { FileEditorJumper } from "./jumpers/fileeditor";
 import { NotebookJumper } from "./jumpers/notebook";
 
 import { CodeMirrorExtension } from "./editors/codemirror";
 import { KeyModifier } from "./editors/editor";
+import { JumpHistory } from "./history";
 
 
 /**
@@ -26,6 +27,8 @@ const plugin: JupyterLabPlugin<void> = {
     palette: ICommandPalette
   ) => {
 
+    let jump_history = new JumpHistory();
+
     CodeMirrorExtension.configure();
 
     fileEditorTracker.widgetAdded.connect((sender, widget) => {
@@ -34,7 +37,7 @@ const plugin: JupyterLabPlugin<void> = {
 
       if (fileEditor.editor instanceof CodeMirrorEditor) {
 
-        let jumper = new FileEditorJumper(fileEditor);
+        let jumper = new FileEditorJumper(fileEditor, jump_history);
         let extension = new CodeMirrorExtension(fileEditor.editor, jumper);
 
         extension.connect();
@@ -46,7 +49,7 @@ const plugin: JupyterLabPlugin<void> = {
       let notebook = widget.content;
       // btw: notebookTracker.currentWidget.content === notebook
 
-      let jumper = new NotebookJumper(notebook);
+      let jumper = new NotebookJumper(notebook, jump_history);
 
       // timeout ain't elegant but the widgets are not populated at the start-up time
       // (notebook.widgets.length === 1) - some time is needed for that,
@@ -106,11 +109,15 @@ const plugin: JupyterLabPlugin<void> = {
     const cmdIds = {
       jumpNotebook: 'go-to-definition:notebook',
       jumpFileEditor: 'go-to-definition:file-editor',
+      jumpBackNotebook: 'go-to-definition:notebook-back',
+      jumpBackFileEditor: 'go-to-definition:file-editor-back',
     };
 
     // Add the command to the palette.
     palette.addItem({ command: cmdIds.jumpNotebook, category: 'Notebook Cell Operations' });
+    palette.addItem({ command: cmdIds.jumpBackNotebook, category: 'Notebook Cell Operations' });
     palette.addItem({ command: cmdIds.jumpFileEditor, category: 'Text Editor' });
+    palette.addItem({ command: cmdIds.jumpBackFileEditor, category: 'Text Editor' });
 
     function isEnabled(tracker: any) {
       return (): boolean =>
@@ -124,14 +131,25 @@ const plugin: JupyterLabPlugin<void> = {
       execute: () => {
         let notebook = notebookTracker.currentWidget.content;
 
-        let jumper = new NotebookJumper(notebook);
+        let jumper = new NotebookJumper(notebook, jump_history);
         let cell = notebook.activeCell;
         let editor = cell.editor;
 
         let position = editor.getCursorPosition();
         let token = editor.getTokenForPosition(position);
 
-        jumper.jump({token, origin: null}, notebook.activeCellIndex)
+        jumper.jump_to_definition({token, origin: null}, notebook.activeCellIndex)
+      },
+      isEnabled: isEnabled(notebookTracker)
+    });
+
+    app.commands.addCommand(cmdIds.jumpBackNotebook, {
+      label: 'Jump back',
+      execute: () => {
+        let notebook = notebookTracker.currentWidget.content;
+
+        let jumper = new NotebookJumper(notebook, jump_history);
+        jumper.jump_back();
       },
       isEnabled: isEnabled(notebookTracker)
     });
@@ -141,13 +159,24 @@ const plugin: JupyterLabPlugin<void> = {
       execute: () => {
         let fileEditor = fileEditorTracker.currentWidget.content;
 
-        let jumper = new FileEditorJumper(fileEditor);
+        let jumper = new FileEditorJumper(fileEditor, jump_history);
         let editor = fileEditor.editor;
 
         let position = editor.getCursorPosition();
         let token = editor.getTokenForPosition(position);
 
-        jumper.jump({token, origin: null})
+        jumper.jump_to_definition({token, origin: null})
+      },
+      isEnabled: isEnabled(fileEditorTracker)
+    });
+
+    app.commands.addCommand(cmdIds.jumpBackFileEditor, {
+      label: 'Jump back',
+      execute: () => {
+        let fileEditor = fileEditorTracker.currentWidget.content;
+
+        let jumper = new FileEditorJumper(fileEditor, jump_history);
+        jumper.jump_back()
       },
       isEnabled: isEnabled(fileEditorTracker)
     });
@@ -159,9 +188,19 @@ const plugin: JupyterLabPlugin<void> = {
         command: cmdIds.jumpNotebook
       },
       {
+        selector: '.jp-Notebook.jp-mod-editMode',
+        keys: ['Alt O'],
+        command: cmdIds.jumpBackNotebook
+      },
+      {
         selector: '.jp-FileEditor',
         keys: ['Ctrl Alt B'],
         command: cmdIds.jumpFileEditor
+      },
+      {
+        selector: '.jp-FileEditor',
+        keys: ['Alt O'],
+        command: cmdIds.jumpBackFileEditor
       },
     ];
 

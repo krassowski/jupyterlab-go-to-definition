@@ -2,17 +2,20 @@ import { Notebook } from "@jupyterlab/notebook";
 import { nbformat } from '@jupyterlab/coreutils';
 
 import { CodeJumper } from "./jumper";
-import { IJump } from "../jump";
+import { IJump, IJumpPosition } from "../jump";
 import { _ensureFocus, _findCell, _findTargetCell } from "../notebook_private";
+import { JumpHistory } from "../history";
 
 
 export class NotebookJumper extends CodeJumper {
 
   notebook: Notebook;
+  history: JumpHistory;
 
-  constructor(notebook: Notebook) {
+  constructor(notebook: Notebook, history: JumpHistory) {
     super();
     this.notebook = notebook;
+    this.history = history;
   }
 
   get editors() {
@@ -25,7 +28,27 @@ export class NotebookJumper extends CodeJumper {
     return languageInfo.name;
   }
 
-  jump(jump: IJump, index?: number) {
+  jump(position: IJumpPosition) {
+    let { token, index } = position;
+
+    // Prevents event propagation issues
+    setTimeout(() => {
+      this.notebook.deselectAll();
+      this.notebook.activeCellIndex = index;
+      _ensureFocus(this.notebook);
+      this.notebook.mode = 'edit';
+
+      // find out offset for the element
+      let activeEditor = this.notebook.activeCell.editor;
+
+      // place cursor in the line with the definition
+      let position = activeEditor.getPositionAt(token.offset);
+      activeEditor.setSelection({start: position, end: position});
+    }, 0);
+
+  }
+
+  jump_to_definition(jump: IJump, index?: number) {
 
     if (index === undefined)
     {
@@ -47,21 +70,14 @@ export class NotebookJumper extends CodeJumper {
       return;
     }
 
-    // Prevents event propagation issues
-    setTimeout(() => {
-      this.notebook.deselectAll();
-      this.notebook.activeCellIndex = cellIndex;
-      _ensureFocus(this.notebook);
-      this.notebook.mode = 'edit';
+    this.history.store(this.notebook, {token: jump.token, index: index});
+    this.jump({token: token, index: cellIndex})
+  }
 
-      // find out offset for the element
-      let activeEditor = this.notebook.activeCell.editor;
-
-      // place cursor in the line with the definition
-      let position = activeEditor.getPositionAt(token.offset);
-      activeEditor.setSelection({start: position, end: position});
-    }, 0);
-
+  jump_back() {
+    let previous_position = this.history.recollect(this.notebook);
+    if (previous_position)
+      this.jump(previous_position)
   }
 
 }

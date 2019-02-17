@@ -53,7 +53,7 @@ export class CodeMirrorExtension extends CodeMirrorTokensProvider implements IEd
 
             let token = this.selectToken(lookupName, target);
 
-            this.jumper.jump({
+            this.jumper.jump_to_definition({
               token: token,
               mouseEvent: event,
               origin: target

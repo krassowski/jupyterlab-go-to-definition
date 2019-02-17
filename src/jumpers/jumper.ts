@@ -10,7 +10,7 @@ export abstract class CodeJumper {
 
   abstract language: string;
 
-  abstract jump(jump: IJump): void
+  abstract jump_to_definition(jump: IJump): void
 
   abstract get editors(): ReadonlyArray<CodeEditor.IEditor>
 

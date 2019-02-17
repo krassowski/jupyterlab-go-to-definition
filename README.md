@@ -10,6 +10,8 @@ Use <kbd>Alt</kbd> + <kbd>click</kbd> to jump to a definition using your mouse, 
 
 You can replace the key modifier for mouse click from <kbd>Alt</kbd> to <kbd>Control</kbd>, <kbd>Shift</kbd>, <kbd>Meta</kbd> or <kbd>AltGraph</kbd> in the settings.
 
+To jump back to the variable/function usage, use <kbd>Alt</kbd> + <kbd>o</kbd>.
+
 The plugin is language-agnostic, though optimized for Python. Initial support for R was recently implemented.
 Support for other languages is possible (PRs welcome).
 
@@ -46,8 +48,8 @@ To run tests suite:
 npm test
 ```
 
-### Adding support for additional lanugages
+### Adding support for additional languages
 
 Support for new languages should be provided by implementation of abstract `LanguageAnalyzer` class (in case of languages which support use of semicolons to terminate statements `LanguageWithOptionalSemicolons` helper class can be utilized).
 
-Each new lanaguege class needs to be included in `chooseLanguageAnalyzer` function and the developer needs to verify if `setLanguageFromMime` in `fileeditor.ts` will be able to recognize the language properly.
+Each new language class needs to be included in `chooseLanguageAnalyzer` function and the developer needs to verify if `setLanguageFromMime` in `fileeditor.ts` will be able to recognize the language properly.
