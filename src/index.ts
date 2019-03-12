@@ -1,4 +1,4 @@
-import { JupyterLab, JupyterLabPlugin } from '@jupyterlab/application';
+import { JupyterFrontEnd, JupyterFrontEndPlugin } from '@jupyterlab/application';
 import { ICommandPalette } from "@jupyterlab/apputils";
 import { INotebookTracker } from "@jupyterlab/notebook";
 import { CodeMirrorEditor } from '@jupyterlab/codemirror';
@@ -16,11 +16,11 @@ import { JumpHistory } from "./history";
 /**
  * The plugin registration information.
  */
-const plugin: JupyterLabPlugin<void> = {
+const plugin: JupyterFrontEndPlugin<void> = {
   id: '@krassowski/jupyterlab_go_to_definition:plugin',
   requires: [IEditorTracker, INotebookTracker, ISettingRegistry, ICommandPalette],
   activate: (
-    app: JupyterLab,
+    app: JupyterFrontEnd,
     fileEditorTracker: IEditorTracker,
     notebookTracker: INotebookTracker,
     settingRegistry: ISettingRegistry,

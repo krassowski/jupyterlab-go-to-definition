@@ -32,24 +32,25 @@
     "test": "npx jest"
   },
   "dependencies": {
-    "@jupyterlab/application": "^0.19.1",
-    "@jupyterlab/apputils": "^0.19.1",
-    "@jupyterlab/codeeditor": "^0.19.1",
-    "@jupyterlab/codemirror": "^0.19.1",
-    "@jupyterlab/coreutils": "^2.2.1",
-    "@jupyterlab/fileeditor": "^0.19.1",
-    "@jupyterlab/notebook": "^0.19.2",
+    "@jupyterlab/application": "^1.0.0-alpha.3",
+    "@jupyterlab/apputils": "^1.0.0-alpha.3",
+    "@jupyterlab/codeeditor": "^1.0.0-alpha.3",
+    "@jupyterlab/codemirror": "^1.0.0-alpha.3",
+    "@jupyterlab/coreutils": "^3.0.0-alpha.3",
+    "@jupyterlab/fileeditor": "^1.0.0-alpha.3",
+    "@jupyterlab/notebook": "^1.0.0-alpha.3",
     "@phosphor/algorithm": "^1.1.2",
-    "@types/jest": "^23.3.11",
-    "chai": "^4.2.0",
-    "codemirror": "^5.42.2",
-    "jest": "^23.6.0",
-    "ts-jest": "^23.10.5"
+    "codemirror": "^5.42.2"
   },
   "devDependencies": {
     "@jupyterlab/testutils": "^0.3.1",
+    "@types/codemirror": "^0.0.72",
     "@types/chai": "^4.1.7",
+    "@types/jest": "^23.3.11",
+    "chai": "^4.2.0",
+    "jest": "^23.6.0",
     "rimraf": "^2.6.1",
+    "ts-jest": "^23.10.5",
     "typescript": "~3.1.1"
   },
   "jupyterlab": {
