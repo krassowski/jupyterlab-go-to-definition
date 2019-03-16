@@ -64,6 +64,29 @@ describe('PythonAnalyzer', () => {
     });
   });
 
+  describe('#isStoreMagic()', () => {
+
+    it('should recognize IPython %store -r magic function', () => {
+      model.value.text = '%store -r x';
+      expect(runWithSelectedToken(analyzer.isStoreMagic, 'x')).to.be.true;
+    });
+
+    it('should ignore other look-alikes', () => {
+      model.value.text = '%store x';
+      expect(runWithSelectedToken(analyzer.isStoreMagic, 'x')).to.be.false;
+
+      model.value.text = '%store -r xx';
+      expect(runWithSelectedToken(analyzer.isStoreMagic, 'x')).to.be.false;
+
+      model.value.text = 'store -r x';
+      expect(runWithSelectedToken(analyzer.isStoreMagic, 'x')).to.be.false;
+
+      model.value.text = '# %store -r x';
+      expect(runWithSelectedToken(analyzer.isStoreMagic, 'x')).to.be.false;
+    });
+  });
+
+
   describe('#isTupleUnpacking', () => {
     it('should recognize simple tuples', () => {
       model.value.text = 'a, b = 1, 2';
