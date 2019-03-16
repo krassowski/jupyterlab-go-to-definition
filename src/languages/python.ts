@@ -52,13 +52,60 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
     this.isImport,
     this.isWithStatement,
     this.isForLoopOrComprehension,
-    this.isTupleUnpacking
+    this.isTupleUnpacking,
+    this.isStoreMagic
   ];
 
   // Matching standalone variable assignment:
   isStandaloneAssignment(siblings: IMeaningfulSiblings) {
     let { next } = siblings;
+
     return next && this.isAssignment(next)
+  }
+
+  // IPython %store -r magic:
+  isStoreMagic(siblings: IMeaningfulSiblings, tokens: ReadonlyArray<IToken>, i: number) {
+    // this may be much better using regexpr
+    // (and more compatible with other engines, but possibly slower)
+    let { previous } = siblings;
+
+    if (previous && previous.value === 'r') {
+      let r_pos = i - 2;
+      let has_r_switch = false;
+
+      while (i - r_pos < 10 && r_pos >= 3) {
+
+        if (tokens[r_pos].value === 'r') {
+          if (tokens[r_pos - 1].value === '-') {
+            has_r_switch = true;
+          }
+          break;
+        }
+        if (tokens[r_pos].value.trim() != '') {
+          return false;
+        }
+        r_pos -= 1;
+
+      }
+      if (!has_r_switch) {
+        return false;
+      }
+
+      let store_pos = r_pos - 2;
+      while (r_pos - store_pos < 10 && store_pos >= 1) {
+        if (tokens[store_pos].value === 'store') {
+          if (tokens[store_pos - 1].value === '%') {
+            return true;
+          }
+        }
+        if (tokens[store_pos].value.trim() != '') {
+          return false;
+        }
+        store_pos -= 1;
+      }
+      return false;
+    }
+    return false;
   }
 
   // Matching imports:

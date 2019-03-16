@@ -9,6 +9,31 @@ import { CodeMirrorTokensProvider } from "./tokens";
 const HANDLERS_ON = '_go_to_are_handlers_on';
 
 
+function getModifierState(event: MouseEvent, modifierKey: string): boolean {
+  // Note: Safari does not support getModifierState on MouseEvent, see:
+  // https://github.com/krassowski/jupyterlab-go-to-definition/issues/3
+  // thus AltGraph and others are not supported on Safari
+  // Full list of modifier keys and mappings to physical keys on different OSes:
+  // https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/getModifierState
+
+  if (event.getModifierState !== undefined) {
+    return event.getModifierState(modifierKey)
+  }
+
+  switch (modifierKey) {
+    case 'Shift':
+      return event.shiftKey;
+    case 'Alt':
+      return event.altKey;
+    case 'Control':
+      return event.ctrlKey;
+    case 'Meta':
+      return event.metaKey;
+  }
+}
+
+
+
 export class CodeMirrorExtension extends CodeMirrorTokensProvider implements IEditorExtension {
 
   jumper: CodeJumper;
@@ -44,7 +69,7 @@ export class CodeMirrorExtension extends CodeMirrorTokensProvider implements IEd
         //codemirror_editor.addKeydownHandler()
         let target = event.target as HTMLElement;
         const {button} = event;
-        if (button === 0 && event.getModifierState(CodeMirrorExtension.modifierKey as string)) {
+        if (button === 0 && getModifierState(event, CodeMirrorExtension.modifierKey as string)) {
 
           const classes = ['cm-variable', 'cm-property'];
 

@@ -8,12 +8,16 @@ Use <kbd>Alt</kbd> + <kbd>click</kbd> to jump to a definition using your mouse, 
 
 ![Go to definition](https://raw.githubusercontent.com/krassowski/jupyterlab-go-to-definition/master/examples/demo.gif)
 
-You can replace the key modifier for mouse click from <kbd>Alt</kbd> to <kbd>Control</kbd>, <kbd>Shift</kbd>, <kbd>Meta</kbd> or <kbd>AltGraph</kbd> in the settings.
+You can replace the key modifier for mouse click from <kbd>Alt</kbd> to <kbd>Control</kbd>, <kbd>Shift</kbd>, <kbd>Meta</kbd> or <kbd>AltGraph</kbd> in the settings*.
 
 To jump back to the variable/function usage, use <kbd>Alt</kbd> + <kbd>o</kbd>.
 
 The plugin is language-agnostic, though optimized for Python. Initial support for R was recently implemented.
 Support for other languages is possible (PRs welcome).
+
+*) For full list of physical keys mapped to the modifiers (which depend on your Operating System), please see [the MDN documentation](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/getModifierState).
+
+Safari users: Safari does not implement `MouseEvent.getModifierState` (see [#3](https://github.com/krassowski/jupyterlab-go-to-definition/issues/3)), thus only <kbd>Alt</kbd>, <kbd>Control</kbd>, <kbd>Shift</kbd> and <kbd>Meta</kbd> are supported.
 
 ## Prerequisites
 
