@@ -188,7 +188,7 @@ const plugin: JupyterLabPlugin<void> = {
         command: cmdIds.jumpNotebook
       },
       {
-        selector: '.jp-Notebook.jp-mod-editMode',
+        selector: '.jp-Notebook',
         keys: ['Alt O'],
         command: cmdIds.jumpBackNotebook
       },
