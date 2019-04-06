@@ -6,6 +6,40 @@ import { chooseLanguageAnalyzer } from "../languages/chooser";
 import { CodeMirrorExtension } from "../editors/codemirror";
 
 
+function hasCellMagic(tokens: CodeEditor.IToken[]) {
+  return (
+    // CodeMirror Python-tokenizer
+    (tokens.length >= 3 && tokens[0].value == '%' && tokens[1].value == '%')
+    ||
+    // CodeMirror R-tokenizer: although IRkernel does not support magics,
+    // cell-magic recognition is still needed whe operating on an R-cell
+    // inside of IPython notebook.
+    (tokens.length >= 2 && tokens[0].value == '%%')
+  )
+}
+
+
+const cell_magic_lang_to_tokenizer : any = {
+  // on the right-hand side is the CodeMirror mode specification
+  // TODO: new class for mode spec?
+  'bash': 'bash',
+  'R': 'r',
+  'python': 'python',
+  'python2': {name: 'python', version: 2},
+  'python3': {name: 'python', version: 3},
+  'javascript': 'javascript',
+  'js': 'javascript',
+  'svg': 'application/xml',
+  'html': 'text/html',
+  'latex': 'text/x-stex'
+  // not working as for now:
+  // 'ruby': 'text/x-ruby',
+  // require additional logic/scripting:
+  // 'script': '',
+  // 'sh': '',
+};
+
+
 export abstract class CodeJumper {
 
   abstract language: string;
@@ -13,6 +47,35 @@ export abstract class CodeJumper {
   abstract jump_to_definition(jump: IJump): void
 
   abstract get editors(): ReadonlyArray<CodeEditor.IEditor>
+
+  protected _getLanguageAnalyzerForCell(cell_editor: CodeEditor.IEditor) {
+
+    let language = this.language;
+
+    // if a cell starts with %%[language] magic, use the other language:
+    let tokens = cell_editor.getTokens();
+
+    // TODO: move this out to a separate jupyterlab-extension?
+    //  this could be run after each change of cell content
+
+    if (hasCellMagic(tokens)) {
+      let magic_name = tokens[0].value == '%' ? tokens[2].value : tokens[1].value;
+      if (cell_magic_lang_to_tokenizer.hasOwnProperty(magic_name)) {
+        language = magic_name;
+        // to get properly parsed tokens for given language,
+        // force the CodeMirror tokenizer to use the corresponding mode
+        let cm = cell_editor as CodeMirrorEditor;
+        cm.editor.setOption('mode', cell_magic_lang_to_tokenizer[language]);
+      }
+    }
+
+    let analyzerClass = chooseLanguageAnalyzer(language);
+
+    // TODO: make this dynamic, depending on editor implementation in use (like with languages)
+    let editor = new CodeMirrorExtension(cell_editor as CodeMirrorEditor, this);
+
+    return new analyzerClass(editor);
+  }
 
   /**
    * Find the last definition of given variable.
@@ -25,13 +88,7 @@ export abstract class CodeJumper {
     for (let i = 0; i <= stopIndex; i++) {
       let cell_editor = this.editors[i];
 
-      // TODO: if a cell starts with %%[language] magic, use the other language?
-      let analyzerClass = chooseLanguageAnalyzer(this.language);
-
-      // TODO: make this dynamic, depending on editor implementation in use (like with languages)
-      let editor = new CodeMirrorExtension(cell_editor as CodeMirrorEditor, this);
-
-      let analyzer = new analyzerClass(editor);
+      let analyzer = this._getLanguageAnalyzerForCell(cell_editor);
 
       // try to find variable assignment
       let definitions = analyzer.getDefinitions(token.value);
