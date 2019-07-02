@@ -2,17 +2,17 @@ const func = require('@jupyterlab/testutils/lib/jest-config');
 const upstream = func('jupyterlab_go_to_definition', __dirname);
 
 const reuseFromUpstream = [
+    'preset',
     'moduleNameMapper',
-    'setupTestFrameworkScriptFile',
+    'setupFilesAfterEnv',
     'setupFiles',
     'testPathIgnorePatterns',
     'moduleFileExtensions',
-    'transform',
 ];
 
 let local = {
-  preset: 'ts-jest',
-  globals: { 'ts-jest': { tsConfig: 'tsconfig.json' } }
+  globals: { 'ts-jest': { tsConfig: 'tsconfig.json' } },
+  testRegex: `.*\.spec\.tsx?$`,
 };
 
 for(option of reuseFromUpstream) {
