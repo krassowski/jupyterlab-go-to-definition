@@ -5,7 +5,7 @@ import { CodeMirrorEditor } from '@jupyterlab/codemirror';
 
 import { CodeMirrorTokensProvider } from "../editors/codemirror/tokens";
 
-import { _closestMeaningfulToken } from "./analyzer";
+import { TokenContext } from "./analyzer";
 import { RAnalyzer } from './r';
 
 
@@ -22,10 +22,7 @@ describe('RAnalyzer', () => {
     let token = matchedTokens[tokenOccurrence - 1];
     let tokenId = tokens.indexOf(token);
 
-    return {
-      next: _closestMeaningfulToken(tokenId, tokens, +1),
-      previous: _closestMeaningfulToken(tokenId, tokens, -1)
-    };
+    return new TokenContext(token, tokens, tokenId);
   }
 
   beforeEach(() => {

@@ -4,6 +4,7 @@ import { INotebookTracker } from "@jupyterlab/notebook";
 import { CodeMirrorEditor } from '@jupyterlab/codemirror';
 import { IEditorTracker } from '@jupyterlab/fileeditor';
 import { ISettingRegistry } from '@jupyterlab/coreutils';
+import { IDocumentManager } from '@jupyterlab/docmanager';
 
 import { FileEditorJumper } from "./jumpers/fileeditor";
 import { NotebookJumper } from "./jumpers/notebook";
@@ -18,13 +19,14 @@ import { JumpHistory } from "./history";
  */
 const plugin: JupyterFrontEndPlugin<void> = {
   id: '@krassowski/jupyterlab_go_to_definition:plugin',
-  requires: [IEditorTracker, INotebookTracker, ISettingRegistry, ICommandPalette],
+  requires: [IEditorTracker, INotebookTracker, ISettingRegistry, ICommandPalette, IDocumentManager],
   activate: (
     app: JupyterFrontEnd,
     fileEditorTracker: IEditorTracker,
     notebookTracker: INotebookTracker,
     settingRegistry: ISettingRegistry,
-    palette: ICommandPalette
+    palette: ICommandPalette,
+    documentManager: IDocumentManager
   ) => {
 
     let jump_history = new JumpHistory();
@@ -46,10 +48,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     notebookTracker.widgetAdded.connect((sender, widget) => {
 
-      let notebook = widget.content;
       // btw: notebookTracker.currentWidget.content === notebook
-
-      let jumper = new NotebookJumper(notebook, jump_history);
+      let jumper = new NotebookJumper(widget, jump_history, documentManager);
+      let notebook = widget.content;
 
       // timeout ain't elegant but the widgets are not populated at the start-up time
       // (notebook.widgets.length === 1) - some time is needed for that,
@@ -129,10 +130,11 @@ const plugin: JupyterFrontEndPlugin<void> = {
     app.commands.addCommand(cmdIds.jumpNotebook, {
       label: 'Jump to definition',
       execute: () => {
-        let notebook = notebookTracker.currentWidget.content;
+        let notebook_widget = notebookTracker.currentWidget;
+        let notebook = notebook_widget.content;
 
-        let jumper = new NotebookJumper(notebook, jump_history);
-        let cell = notebook.activeCell;
+        let jumper = new NotebookJumper(notebook_widget, jump_history, documentManager);
+        let cell = notebook_widget.content.activeCell;
         let editor = cell.editor;
 
         let position = editor.getCursorPosition();
@@ -146,9 +148,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
     app.commands.addCommand(cmdIds.jumpBackNotebook, {
       label: 'Jump back',
       execute: () => {
-        let notebook = notebookTracker.currentWidget.content;
+        let notebook_widget = notebookTracker.currentWidget;
 
-        let jumper = new NotebookJumper(notebook, jump_history);
+        let jumper = new NotebookJumper(notebook_widget, jump_history, documentManager);
         jumper.jump_back();
       },
       isEnabled: isEnabled(notebookTracker)

@@ -1,5 +1,5 @@
 import { CodeEditor } from "@jupyterlab/codeeditor";
-import { LanguageWithOptionalSemicolons, IMeaningfulSiblings } from "./analyzer";
+import { LanguageWithOptionalSemicolons, TokenContext } from "./analyzer";
 
 
 export class RAnalyzer extends LanguageWithOptionalSemicolons {
@@ -21,37 +21,37 @@ export class RAnalyzer extends LanguageWithOptionalSemicolons {
   }
 
   // Matching standalone variable assignment:
-  isStandaloneAssignment(siblings: IMeaningfulSiblings) {
+  isStandaloneAssignment(siblings: TokenContext) {
     let { previous, next } = siblings;
     return (
       // standard, leftwards assignments:
-      (next && this.isAssignment(next))
+      (next.exists && this.isAssignment(next))
       ||
       // rightwards assignments:
-      (previous && previous.type == 'operator arrow' &&
+      (previous.exists && previous.type == 'operator arrow' &&
         (previous.value === '->' || previous.value === '->>')
       )
     )
   }
 
   // Matching imports:
-  isImport(siblings: IMeaningfulSiblings) {
+  isImport(siblings: TokenContext) {
     let { previous } = siblings;
     return (
-      previous &&
+      previous.exists &&
       previous.type === 'variable' &&
       (previous.value === 'library' || previous.value === 'require')
     )
   }
 
   // Matching `for` loop and comprehensions:
-  isForLoop(siblings: IMeaningfulSiblings) {
+  isForLoop(siblings: TokenContext) {
     let { previous, next } = siblings;
     return (
-      previous &&
+      previous.exists &&
       previous.type === 'keyword' &&
       previous.value === 'for' &&
-      next &&
+      next.exists &&
       next.type === 'keyword' &&
       next.value === 'in'
     )

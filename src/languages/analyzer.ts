@@ -1,18 +1,51 @@
 import { CodeEditor } from "@jupyterlab/codeeditor";
-
+import { Kernel, KernelMessage } from "@jupyterlab/services";
 import { ITokensProvider } from "../editors/editor";
 
 
-export interface IMeaningfulSiblings {
-  next: CodeEditor.IToken,
-  previous: CodeEditor.IToken,
-}
+export type RuleFunction = (context: TokenContext) => boolean;
+export type QueryFunction = (context: TokenContext) => string[];
 
-export type RuleFunction = (
-  siblings: IMeaningfulSiblings,
-  tokens?: ReadonlyArray<CodeEditor.IToken>,
-  position?: number
-) => boolean;
+
+export class TokenContext implements CodeEditor.IToken {
+
+  // ReadonlyArray ?
+  tokens: Array<CodeEditor.IToken>;
+
+  _previous: TokenContext;
+  token: CodeEditor.IToken;
+  _next: TokenContext;
+
+  index: number;
+
+  constructor(token: CodeEditor.IToken, tokens: Array<CodeEditor.IToken>, index: number) {
+    this.token = token;
+    this.index = index;
+    this.tokens = tokens;
+  }
+
+  get previous() {
+    if(!this._previous) {
+      let {token, index} = _closestMeaningfulTokenWithIndex(this.index, this.tokens, -1);
+      // TODO: null!!
+      this._previous = new TokenContext(token, this.tokens, index)
+    }
+    return this._previous;
+  }
+
+  get next() {
+    if(!this._next) {
+      let {token, index} = _closestMeaningfulTokenWithIndex(this.index, this.tokens, +1);
+      this._next = new TokenContext(token, this.tokens, index)
+    }
+    return this._next;
+  }
+
+  get value() { return this.token.value; }
+  get type() { return this.token.type; }
+  get offset() { return this.token.offset; }
+  get exists() { return !!this.token }
+}
 
 
 export abstract class LanguageAnalyzer {
@@ -29,18 +62,60 @@ export abstract class LanguageAnalyzer {
 
   abstract definitionRules: Array<RuleFunction>;
 
+  isCrossFileReference(context: TokenContext) {
+    // identify Python import, and R source(), library(), require()
+    return false;
+  }
+
+  guessReferencePath(context: TokenContext) {
+    // more than one guess allowed
+    return [''];
+  }
+
+  referencePathQuery(context: TokenContext) {
+    return '';
+  }
+
+  requestReferencePathFromKernel(context: TokenContext, kernel: Kernel.IKernelConnection, callback: (msg: KernelMessage.IIOPubMessage) => any) {
+    let code = this.referencePathQuery(context);
+
+    if(!code)
+      return;
+    let request = {
+      code: code,
+      stop_on_error: false,
+      silent: true
+    };
+    kernel.ready.then(() => {
+      let future = kernel.requestExecute(request);
+
+      future.onIOPub = callback;//(msg) => {callback(msg);});
+
+      return future.done;
+    })
+  }
+
+  _maybe_setup_tokens() {
+    if (!this.tokens) {
+      this.tokens = this.tokensProvider.getTokens();
+    }
+  }
+
+  _get_token_index(token: CodeEditor.IToken) {
+    this._maybe_setup_tokens();
+    return this.tokens.findIndex(t => (t.value == token.value && t.offset == token.offset))
+  }
+
   isDefinition(token: CodeEditor.IToken, i: number) {
 
     if (token.type === 'variable') {
 
-      let siblings = {
-        next: _closestMeaningfulToken(i, this.tokens, +1),
-        previous: _closestMeaningfulToken(i, this.tokens, -1)
-      };
+      let token_context = new TokenContext(token, this.tokens, i);
+
       let isVariableDefinition: RuleFunction;
 
       for (isVariableDefinition of this.definitionRules) {
-        if (isVariableDefinition.bind(this)(siblings, this.tokens, i)) {
+        if (isVariableDefinition.bind(this)(token_context)) {
           return true;
         }
       }
@@ -173,21 +248,26 @@ export abstract class LanguageWithOptionalSemicolons extends LanguageAnalyzer {
 }
 
 
-export function _closestMeaningfulToken(
+interface TokenWithIndex {
+  index: number,
+  token: CodeEditor.IToken
+}
+
+export function _closestMeaningfulTokenWithIndex(
   tokenIndex: number,
   tokens: Array<CodeEditor.IToken>,
   direction: number
-): CodeEditor.IToken {
+): TokenWithIndex {
   let nextMeaningfulToken = null;
   while (nextMeaningfulToken == null) {
     tokenIndex += direction;
     if (tokenIndex < 0 || tokenIndex >= tokens.length) {
-      return null;
+      return {index: null, token: null};
     }
     let nextToken = tokens[tokenIndex];
     if (nextToken.type !== '') {
       nextMeaningfulToken = nextToken;
     }
   }
-  return nextMeaningfulToken;
+  return {index: tokenIndex, token: nextMeaningfulToken};
 }

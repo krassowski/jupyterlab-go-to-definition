@@ -5,7 +5,7 @@ import { CodeMirrorEditor } from '@jupyterlab/codemirror';
 
 import { CodeMirrorTokensProvider } from "../editors/codemirror/tokens";
 
-import { _closestMeaningfulToken, RuleFunction } from "./analyzer";
+import { QueryFunction, RuleFunction, TokenContext } from "./analyzer";
 import { PythonAnalyzer } from './python';
 import { CodeJumper } from "../jumpers/jumper";
 import { IJump } from '../jump';
@@ -29,10 +29,19 @@ describe('PythonAnalyzer', () => {
     let token = matchToken(tokens, tokenName, tokenOccurrence, tokenType);
     let tokenId = tokens.indexOf(token);
 
-    return method.bind(analyzer)({
-      next: _closestMeaningfulToken(tokenId, tokens, +1),
-      previous: _closestMeaningfulToken(tokenId, tokens, -1)
-    }, tokens, tokenId);
+    analyzer.tokens = tokens;
+
+    return method.bind(analyzer)(new TokenContext(token, tokens, tokenId));
+  }
+
+  function queryWithSelectedToken(method: QueryFunction, tokenName: string, tokenOccurrence = 1, tokenType = 'variable') {
+    let tokens = tokensProvider.getTokens();
+    let token = matchToken(tokens, tokenName, tokenOccurrence, tokenType);
+    let tokenId = tokens.indexOf(token);
+
+    analyzer.tokens = tokens;
+
+    return method.bind(analyzer)(new TokenContext(token, tokens, tokenId));
   }
 
   beforeEach(() => {
@@ -138,6 +147,7 @@ describe('PythonAnalyzer', () => {
 
   });
 
+
   describe('#isForLoopOrComprehension', () => {
 
     it('should recognize variables declared inside of loops', () => {
@@ -160,6 +170,25 @@ describe('PythonAnalyzer', () => {
     });
 
   });
+
+
+  describe('#isCrossFileReference', () => {
+
+    it('should handle "from y import x" upon clicking on "y"', () => {
+      model.value.text = 'from y import x';
+      expect(runWithSelectedToken(analyzer.isCrossFileReference, 'y')).to.be.true;
+      // this will be handled separately as it requires opening cross-referenced file AND jumping to a position in it
+      model.value.text = 'from y import x';
+      expect(runWithSelectedToken(analyzer.isCrossFileReference, 'x')).to.be.false;
+
+      expect(queryWithSelectedToken(analyzer.guessReferencePath, 'y')).to.eql(['y.py', 'y/__init__.py']);
+    });
+
+    it('should handle "import y" upon clicking on "y"', () => {
+      model.value.text = 'import y';
+      expect(runWithSelectedToken(analyzer.isCrossFileReference, 'y')).to.be.true;
+    })
+  })
 });
 
 

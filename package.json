@@ -37,8 +37,10 @@
     "@jupyterlab/codeeditor": "^1.0.0",
     "@jupyterlab/codemirror": "^1.0.0",
     "@jupyterlab/coreutils": "^3.0.0",
+    "@jupyterlab/docmanager": "^1.0.0",
     "@jupyterlab/fileeditor": "^1.0.0",
     "@jupyterlab/notebook": "^1.0.0",
+    "@jupyterlab/services": "^4.0.0",
     "@phosphor/algorithm": "^1.1.2",
     "codemirror": "^5.47.0",
     "react": "^16.8.4"

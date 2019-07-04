@@ -1,6 +1,7 @@
 import { CodeEditor } from "@jupyterlab/codeeditor";
-import { LanguageWithOptionalSemicolons, IMeaningfulSiblings } from "./analyzer";
+import { LanguageWithOptionalSemicolons, TokenContext } from "./analyzer";
 import IToken = CodeEditor.IToken;
+import { Kernel } from "@jupyterlab/services";
 
 
 function evaluateSkippingBrackets(tokens: ReadonlyArray<IToken>, indexShift: number, callback: Function, allowNegativeBrackets=false){
@@ -57,23 +58,23 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
   ];
 
   // Matching standalone variable assignment:
-  isStandaloneAssignment(siblings: IMeaningfulSiblings) {
+  isStandaloneAssignment(siblings: TokenContext) {
     let { next } = siblings;
 
-    return next && this.isAssignment(next)
+    return next.exists && this.isAssignment(next)
   }
 
   // IPython %store -r magic:
-  isStoreMagic(siblings: IMeaningfulSiblings, tokens: ReadonlyArray<IToken>, i: number) {
+  isStoreMagic(context: TokenContext) {
     // this may be much better using regexpr
     // (and more compatible with other engines, but possibly slower)
-    let { previous } = siblings;
+    let { previous, index, tokens } = context;
 
-    if (previous && previous.value === 'r') {
-      let r_pos = i - 2;
+    if (previous.exists && previous.value === 'r') {
+      let r_pos = index - 2;
       let has_r_switch = false;
 
-      while (i - r_pos < 10 && r_pos >= 3) {
+      while (index - r_pos < 10 && r_pos >= 3) {
 
         if (tokens[r_pos].value === 'r') {
           if (tokens[r_pos - 1].value === '-') {
@@ -109,41 +110,100 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
   }
 
   // Matching imports:
-  isImport(siblings: IMeaningfulSiblings) {
-    let { previous } = siblings;
+  isImport(context: TokenContext) {
+    let { previous } = context;
+
     return (
-      previous &&
+      previous.exists &&
       previous.type === 'keyword' &&
       previous.value === 'import'
     )
   }
 
+
+  isCrossFileReference(context: TokenContext): boolean {
+
+    let previous = context.previous;
+    let next = context.next;
+
+    if (
+      previous.exists &&
+        previous.type == 'keyword' &&
+        previous.value == 'from' &&
+      next.exists &&
+        next.type === 'keyword' &&
+        next.value === 'import'
+    )
+      return true;
+
+    let before_previous = context.previous.previous.previous;
+
+    if (
+      this.isImport(context)
+      &&
+      !(
+        before_previous.exists &&
+        before_previous.type === 'keyword' &&
+        before_previous.value === 'from'
+      )
+    )
+      return true;
+
+    return false;
+  }
+
+  referencePathQuery(context: TokenContext) {
+    let { token } = context;
+    let value = token.value;
+
+    if(/^[a-zA-Z_.]+$/.test(value)) {
+      // just in case to prevent arbitrary execution
+      return `
+      from importlib.machinery import PathFinder
+      import pathlib
+      print((
+          pathlib.Path(
+            PathFinder.find_module('` + value + `').path
+          ).relative_to(pathlib.Path.cwd())
+        ),
+        end=''
+       )
+      `
+    }
+  }
+
+  guessReferencePath(context: TokenContext, kernel?: Kernel.IKernelConnection) {
+    let { token } = context;
+    return [token.value + '.py', token.value + '/' + '__init__.py']
+  }
+
   // Matching `as`:
   // e.g. `with open('name') as f:` or `except Exception as e:`
-  isWithStatement(siblings: IMeaningfulSiblings) {
-    let { previous } = siblings;
+  isWithStatement(context: TokenContext) {
+    let { previous } = context;
     return (
-      previous &&
+      previous.exists &&
       previous.type === 'keyword' &&
       previous.value === 'as'
     )
   }
 
   // Matching `for` loop and comprehensions:
-  isForLoopOrComprehension(siblings: IMeaningfulSiblings) {
-    let { previous, next } = siblings;
+  isForLoopOrComprehension(context: TokenContext) {
+    let { previous, next } = context;
     return (
-      previous &&
+      previous.exists &&
       previous.type === 'keyword' &&
       previous.value === 'for' &&
-      next &&
+      next.exists &&
       next.type === 'keyword' &&
       next.value === 'in'
     )
   }
 
-  isTupleUnpacking(siblings: IMeaningfulSiblings, tokens: ReadonlyArray<CodeEditor.IToken>, i: number) {
+  isTupleUnpacking(context: TokenContext) {
     // Matching variables in tuple unpacking:
+    let { tokens, index } = context;
 
     // Considering: `a, [b, c], (d, ) = 1, [1, 2], (1,)`, if the tested
     // token is `a`, then the next expected token would be a comma,
@@ -151,7 +211,7 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
     // or an opening bracket (for simplicity brackets can be ignored).
     let commaExpected = true;
 
-    return evaluateSkippingBrackets(tokens, i + 1, (nextToken: IToken, indexShift: number) => {
+    return evaluateSkippingBrackets(tokens, index + 1, (nextToken: IToken, indexShift: number) => {
 
       if (nextToken.type === 'operator' && nextToken.value === '=') {
 
