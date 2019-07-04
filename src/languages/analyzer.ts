@@ -52,6 +52,7 @@ export abstract class LanguageAnalyzer {
 
   tokens: Array<CodeEditor.IToken>;
   tokensProvider: ITokensProvider;
+  supportsKernel = false;
   /**
    * Name of a variable for which a definition is sought
    */

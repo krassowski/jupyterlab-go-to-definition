@@ -1,7 +1,6 @@
 import { CodeEditor } from "@jupyterlab/codeeditor";
 import { LanguageWithOptionalSemicolons, TokenContext } from "./analyzer";
 import IToken = CodeEditor.IToken;
-import { Kernel } from "@jupyterlab/services";
 
 
 function evaluateSkippingBrackets(tokens: ReadonlyArray<IToken>, indexShift: number, callback: Function, allowNegativeBrackets=false){
@@ -152,6 +151,8 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
     return false;
   }
 
+  supportsKernel = true;
+
   referencePathQuery(context: TokenContext) {
     let { token } = context;
     let value = token.value;
@@ -172,7 +173,7 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
     }
   }
 
-  guessReferencePath(context: TokenContext, kernel?: Kernel.IKernelConnection) {
+  guessReferencePath(context: TokenContext) {
     let { token } = context;
     return [token.value + '.py', token.value + '/' + '__init__.py']
   }

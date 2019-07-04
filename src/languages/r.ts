@@ -57,4 +57,26 @@ export class RAnalyzer extends LanguageWithOptionalSemicolons {
     )
   }
 
+  guessReferencePath(context: TokenContext) {
+    let { next } = context;
+    return [next.next.value.slice(0, -1)]
+  }
+
+  isCrossFileReference(context: TokenContext): boolean {
+    // TODO: unit test
+    // case: "source('test.R')" - clicking on source will open test.R
+
+    let { next } = context;
+
+    if (
+      context.type == 'variable' &&
+      context.value == 'source' &&
+      next.exists && next.value == "'" &&
+      next.next.exists
+    )
+      return true;
+
+    return false;
+  }
+
 }

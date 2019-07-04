@@ -108,7 +108,7 @@ export class NotebookJumper extends CodeJumper {
       // cross file jump tbd
       let kernel = this.widget.session.kernel;
 
-      if (kernel) {
+      if (cell_of_origin_analyzer.supportsKernel && kernel) {
         cell_of_origin_analyzer.requestReferencePathFromKernel(
           context, kernel,
           msg => this.handle_path_from_kernel(msg)
