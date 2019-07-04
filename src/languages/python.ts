@@ -119,11 +119,35 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
     )
   }
 
+  traverse_left(previous: TokenContext, step_on: string) {
+    let is_dot = previous.simple_next === step_on;
+
+    while (is_dot) {
+      previous = previous.previous;
+      is_dot = previous.simple_next === step_on;
+    }
+    return previous
+  }
+
+  traverse_right(next: TokenContext, step_on: string) {
+    let is_dot = next.simple_previous === step_on;
+
+    while (is_dot) {
+      next = next.next;
+      is_dot = next.simple_previous === step_on;
+    }
+    return next
+  }
 
   isCrossFileReference(context: TokenContext): boolean {
 
+    // from a import b; from a.b import c
+
     let previous = context.previous;
     let next = context.next;
+
+    previous = this.traverse_left(previous, '.');
+    next = this.traverse_right(next, '.');
 
     if (
       previous.exists &&
@@ -134,6 +158,9 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
         next.value === 'import'
     )
       return true;
+
+
+    // import x
 
     let before_previous = context.previous.previous.previous;
 
@@ -174,8 +201,21 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
   }
 
   guessReferencePath(context: TokenContext) {
-    let { token } = context;
-    return [token.value + '.py', token.value + '/' + '__init__.py']
+    let { previous, token } = context;
+
+    let parts: string[] = [];
+    let is_dot = previous.simple_next === '.';
+
+    while (is_dot) {
+      parts.push(previous.value);
+      previous = previous.previous;
+      is_dot = previous.simple_next === '.';
+    }
+
+    parts.push(token.value);
+
+    let prefix = parts.join('/');
+    return [prefix + '.py', prefix + '/__init__.py']
   }
 
   // Matching `as`:

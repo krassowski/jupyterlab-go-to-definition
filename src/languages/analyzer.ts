@@ -24,6 +24,14 @@ export class TokenContext implements CodeEditor.IToken {
     this.tokens = tokens;
   }
 
+  get simple_next() {
+    return this.index + 1 < this.tokens.length ? this.tokens[this.index + 1].value : null
+  }
+
+  get simple_previous() {
+    return this.index - 1 > 0 ? this.tokens[this.index - 1].value : null
+  }
+
   get previous() {
     if(!this._previous) {
       let {token, index} = _closestMeaningfulTokenWithIndex(this.index, this.tokens, -1);
@@ -82,15 +90,12 @@ export abstract class LanguageAnalyzer {
 
     if(!code)
       return;
-    let request = {
-      code: code,
-      stop_on_error: false,
-      silent: true
-    };
+
+    let request = {code: code, stop_on_error: false, silent: true};
     kernel.ready.then(() => {
       let future = kernel.requestExecute(request);
 
-      future.onIOPub = callback;//(msg) => {callback(msg);});
+      future.onIOPub = callback;
 
       return future.done;
     })

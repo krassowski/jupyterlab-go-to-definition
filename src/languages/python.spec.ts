@@ -187,6 +187,17 @@ describe('PythonAnalyzer', () => {
     it('should handle "import y" upon clicking on "y"', () => {
       model.value.text = 'import y';
       expect(runWithSelectedToken(analyzer.isCrossFileReference, 'y')).to.be.true;
+    });
+
+    it('should handle "from a.b import c" when clicking on "b" (open a/b.py) or "a" (open a/__init__.py)', () => {
+      model.value.text = 'from a.b import c';
+      expect(runWithSelectedToken(analyzer.isCrossFileReference, 'a')).to.be.true;
+
+      expect(runWithSelectedToken(analyzer.isCrossFileReference, 'b', 1, 'property')).to.be.true;
+
+      expect(queryWithSelectedToken(analyzer.guessReferencePath, 'b', 1, 'property')).to.eql(
+        ['a/b.py', 'a/b/__init__.py']
+      );
     })
   })
 });
