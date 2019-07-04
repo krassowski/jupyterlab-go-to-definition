@@ -12,12 +12,16 @@ You can replace the key modifier for mouse click from <kbd>Alt</kbd> to <kbd>Con
 
 To jump back to the variable/function usage, use <kbd>Alt</kbd> + <kbd>o</kbd>.
 
-The plugin is language-agnostic, though optimized for Python. Initial support for R was recently implemented.
+The plugin is language-agnostic, though optimized for Python and R.
 Support for other languages is possible (PRs welcome).
 
-*) For full list of physical keys mapped to the modifiers (which depend on your Operating System), please see [the MDN documentation](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/getModifierState).
+Simple jumping to files is possible** - click on the name of a module in Python (e.g. `from x.y import z` - alt-click on `x` or `z`) or on `source` function in R (e.g. alt-clicking on `source` in `source('test.R')` will open `test.R` file).
+
+\*) For full list of physical keys mapped to the modifiers (which depend on your Operating System), please see [the MDN documentation](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/getModifierState).
 
 Safari users: Safari does not implement `MouseEvent.getModifierState` (see [#3](https://github.com/krassowski/jupyterlab-go-to-definition/issues/3)), thus only <kbd>Alt</kbd>, <kbd>Control</kbd>, <kbd>Shift</kbd> and <kbd>Meta</kbd> are supported.
+
+\*\*) if those are within reach of JupyterLab - which usually limits opening of files to the level of the starting dirctory.
 
 ## Prerequisites
 
@@ -27,6 +31,12 @@ Safari users: Safari does not implement `MouseEvent.getModifierState` (see [#3](
 
 ```bash
 jupyter labextension install @krassowski/jupyterlab_go_to_definition
+```
+
+To update already installed extension:
+
+```bash
+jupyter labextension update @krassowski/jupyterlab_go_to_definition
 ```
 
 ## Development
