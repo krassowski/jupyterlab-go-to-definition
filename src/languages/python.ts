@@ -160,12 +160,12 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
       return true;
 
 
-    // import x
+    // import x, import a.b
 
-    let before_previous = context.previous.previous.previous;
+    let before_previous = previous.previous.previous;
 
     if (
-      this.isImport(context)
+      this.isImport(previous.next)
       &&
       !(
         before_previous.exists &&
@@ -180,27 +180,7 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
 
   supportsKernel = true;
 
-  referencePathQuery(context: TokenContext) {
-    let { token } = context;
-    let value = token.value;
-
-    if(/^[a-zA-Z_.]+$/.test(value)) {
-      // just in case to prevent arbitrary execution
-      return `
-      from importlib.machinery import PathFinder
-      import pathlib
-      print((
-          pathlib.Path(
-            PathFinder.find_module('` + value + `').path
-          ).relative_to(pathlib.Path.cwd())
-        ),
-        end=''
-       )
-      `
-    }
-  }
-
-  guessReferencePath(context: TokenContext) {
+  _imports_breadcrumbs(context: TokenContext) {
     let { previous, token } = context;
 
     let parts: string[] = [];
@@ -212,8 +192,50 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
       is_dot = previous.simple_next === '.';
     }
 
+    // relative imports
+    if (previous.simple_previous === '.') {
+      parts.push('')
+    }
+    if (previous.simple_previous === '..') {
+      parts.push('.')
+    }
+
+    parts = parts.reverse();
+
     parts.push(token.value);
 
+    return parts
+  }
+
+  referencePathQuery(context: TokenContext) {
+
+    let parts = this._imports_breadcrumbs(context);
+    let value  = parts.join('.');
+
+    if(/^[a-zA-Z_.]+$/.test(value)) {
+      // just in case to prevent arbitrary execution
+      return `
+try:
+    from importlib.util import find_spec
+    import pathlib
+    print(
+        pathlib.Path(
+          find_spec('` + value + `').origin
+        ).relative_to(pathlib.Path.cwd()),
+        end=''
+    )
+except Exception:
+    # Python 2.7, untested
+    import imp
+    # TODO: this is not the best idea. JSON might be better
+    from __future__ import print_function
+    print(imp.find_module('` + value + `')[1], end='')
+`
+    }
+  }
+
+  guessReferencePath(context: TokenContext) {
+    let parts = this._imports_breadcrumbs(context);
     let prefix = parts.join('/');
     return [prefix + '.py', prefix + '/__init__.py']
   }

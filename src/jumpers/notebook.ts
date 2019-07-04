@@ -65,10 +65,15 @@ export class NotebookJumper extends CodeJumper {
     .catch(() => {})
   }
 
-  handle_path_from_kernel(response: IIOPubMessage) {
+  handle_path_from_kernel(response: IIOPubMessage, fallback_paths: string[]) {
     let obj: any = response.content;
     if(obj.name === 'stdout') {
       this.try_to_open_document(obj.text);
+    }
+    else if (response.header.msg_type === 'error') {
+      for(let path of fallback_paths) {
+        this.try_to_open_document(path);
+      }
     }
   }
 
@@ -105,19 +110,19 @@ export class NotebookJumper extends CodeJumper {
 
     if(cell_of_origin_analyzer.isCrossFileReference(context))
     {
-      // cross file jump tbd
+      let potential_paths = cell_of_origin_analyzer.guessReferencePath(context);
+
       let kernel = this.widget.session.kernel;
 
       if (cell_of_origin_analyzer.supportsKernel && kernel) {
         cell_of_origin_analyzer.requestReferencePathFromKernel(
           context, kernel,
-          msg => this.handle_path_from_kernel(msg)
+          msg => this.handle_path_from_kernel(msg, potential_paths)
         );
       }
       else {
-        // if kernel is not available, try guessing the path
-        let potential_paths = cell_of_origin_analyzer.guessReferencePath(context);
-        // resolve path or try one by one
+        // if kernel is not available, try use the guessed paths
+        // try one by one
         for(let path of potential_paths) {
           this.try_to_open_document(path);
         }

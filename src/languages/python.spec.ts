@@ -198,7 +198,26 @@ describe('PythonAnalyzer', () => {
       expect(queryWithSelectedToken(analyzer.guessReferencePath, 'b', 1, 'property')).to.eql(
         ['a/b.py', 'a/b/__init__.py']
       );
-    })
+    });
+
+    it('should handle "import a.b" upon clicking on "a" or "b"', () => {
+      model.value.text = 'import a.b';
+      expect(runWithSelectedToken(analyzer.isCrossFileReference, 'a')).to.be.true;
+
+      expect(runWithSelectedToken(analyzer.isCrossFileReference, 'b')).to.be.true;
+
+      expect(queryWithSelectedToken(analyzer.guessReferencePath, 'a')).to.eql(
+        ['a.py', 'a/__init__.py']
+      );
+
+      expect(queryWithSelectedToken(analyzer.guessReferencePath, 'b', 1, 'property')).to.eql(
+        ['a/b.py', 'a/b/__init__.py']
+      );
+    });
+
+    // TODO:
+    // from .a import *
+    // from . import b
   })
 });
 
