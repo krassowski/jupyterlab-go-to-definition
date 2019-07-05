@@ -85,11 +85,7 @@ export abstract class LanguageAnalyzer {
     return '';
   }
 
-  requestReferencePathFromKernel(context: TokenContext, kernel: Kernel.IKernelConnection, callback: (msg: KernelMessage.IIOPubMessage) => any) {
-    let code = this.referencePathQuery(context);
-
-    if(!code)
-      return;
+  requestReferencePathFromKernel(code: string, kernel: Kernel.IKernelConnection, callback: (msg: KernelMessage.IIOPubMessage) => any) {
 
     let request = {code: code, stop_on_error: false, silent: true};
     kernel.ready.then(() => {
@@ -109,7 +105,7 @@ export abstract class LanguageAnalyzer {
 
   _get_token_index(token: CodeEditor.IToken) {
     this._maybe_setup_tokens();
-    return this.tokens.findIndex(t => (t.value == token.value && t.offset == token.offset))
+    return this.tokens.findIndex(t => (t.value == token.value && t.offset == token.offset && t.type == token.type))
   }
 
   isDefinition(token: CodeEditor.IToken, i: number) {

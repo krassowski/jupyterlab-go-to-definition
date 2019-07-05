@@ -7,14 +7,8 @@ import { CodeMirrorTokensProvider } from "../editors/codemirror/tokens";
 
 import { QueryFunction, RuleFunction, TokenContext } from "./analyzer";
 import { PythonAnalyzer } from './python';
-import { CodeJumper } from "../jumpers/jumper";
-import { IJump } from '../jump';
-
-
-function matchToken(tokens: ReadonlyArray<CodeEditor.IToken>, tokenName: string, tokenOccurrence = 1, tokenType = 'variable'): CodeEditor.IToken{
-  let matchedTokens = tokens.filter(token => token.value == tokenName && token.type == tokenType);
-  return matchedTokens[tokenOccurrence - 1]
-}
+import { Jumper, matchToken } from "../testutils";
+import IToken = CodeEditor.IToken;
 
 
 describe('PythonAnalyzer', () => {
@@ -66,6 +60,14 @@ describe('PythonAnalyzer', () => {
       model.value.text = 'x = 1';
       expect(runWithSelectedToken(analyzer.isStandaloneAssignment, 'x')).to.be.true;
     });
+
+    it('should recognize transitive assignments', () => {
+      model.value.text = 'x = y = 1';
+      expect(runWithSelectedToken(analyzer.isStandaloneAssignment, 'x')).to.be.true;
+      expect(runWithSelectedToken(analyzer.isStandaloneAssignment, 'y')).to.be.true;
+    });
+
+
 
     it('should ignore increments', () => {
       model.value.text = 'x += 1';
@@ -200,6 +202,15 @@ describe('PythonAnalyzer', () => {
       );
     });
 
+    it('should handle import all, relatives and underscores', () => {
+      model.value.text = 'a_b = 1; from .a_b import *';
+      expect(runWithSelectedToken(analyzer.isCrossFileReference, 'a_b', 1, 'property')).to.be.true;
+
+      expect(queryWithSelectedToken(analyzer.guessReferencePath, 'a_b', 1, 'property')).to.eql(
+        ['a_b.py', 'a_b/__init__.py']
+      );
+    });
+
     it('should handle "import a.b" upon clicking on "a" or "b"', () => {
       model.value.text = 'import a.b';
       expect(runWithSelectedToken(analyzer.isCrossFileReference, 'a')).to.be.true;
@@ -218,35 +229,10 @@ describe('PythonAnalyzer', () => {
     // TODO:
     // from .a import *
     // from . import b
+    // %run helpers/notebook_setup.ipynb
   })
 });
 
-
-class Jumper extends CodeJumper {
-  language: string = 'python';
-  editor: CodeEditor.IEditor;
-
-  constructor(editor: CodeEditor.IEditor) {
-    super();
-    this.editor = editor;
-  }
-
-  get editors() {
-    return [this.editor];
-  }
-
-  jump_to_definition(jump: IJump) {
-    let {token} = this._findLastDefinition(jump.token, 0);
-
-    // nothing found
-    if (!token) {
-      return;
-    }
-
-    let position = this.editor.getPositionAt(token.offset);
-    this.editor.setSelection({start: position, end: position});
-  }
-}
 
 describe('Jumper with PythonAnalyzer', () => {
   let editor: CodeMirrorEditor;
@@ -271,6 +257,17 @@ describe('Jumper with PythonAnalyzer', () => {
     document.body.removeChild(host);
   });
 
+  function test_jump(token: IToken, first_position: CodeEditor.IPosition, second_position: CodeEditor.IPosition) {
+    editor.setCursorPosition(first_position);
+
+    expect(editor.getCursorPosition()).to.deep.equal(first_position);
+    expect(editor.getTokenForPosition(first_position)).to.deep.equal(token);
+
+    jumper.jump_to_definition({token: token, origin: null, mouseEvent: null});
+
+    expect(editor.getCursorPosition()).to.deep.equal(second_position);
+  }
+
   describe('Jumper', () => {
 
     it('should handle simple jumps', () => {
@@ -281,14 +278,8 @@ describe('Jumper with PythonAnalyzer', () => {
 
       let firstAPosition = {line: 0, column: 0};
       let secondAPosition = {line: 1, column: 5};
-      editor.setCursorPosition(secondAPosition);
 
-      expect(editor.getCursorPosition()).to.deep.equal(secondAPosition);
-      expect(editor.getTokenForPosition(secondAPosition)).to.deep.equal(token);
-
-      jumper.jump_to_definition({token: token, origin: null, mouseEvent: null});
-
-      expect(editor.getCursorPosition()).to.deep.equal(firstAPosition);
+      test_jump(token, secondAPosition, firstAPosition);
     });
 
     it('handles variable usage inside definitions overriding the same variable', () => {
@@ -299,15 +290,43 @@ describe('Jumper with PythonAnalyzer', () => {
 
       let firstAPosition = {line: 0, column: 0};
       let thirdAPosition = {line: 1, column: 5};
-      editor.setCursorPosition(thirdAPosition);
 
-      expect(editor.getCursorPosition()).to.deep.equal(thirdAPosition);
-      expect(editor.getTokenForPosition(thirdAPosition)).to.deep.equal(token);
+      test_jump(token, thirdAPosition, firstAPosition);
 
-      jumper.jump_to_definition({token: token, origin: null, mouseEvent: null});
+    });
 
-      expect(editor.getCursorPosition()).to.deep.equal(firstAPosition);
+    it('should work in functions', () => {
+      model.value.text = `def x():
+    a = 1
+    x = a
+a = 2`;
+      // note: the 'a = 2' was good enough to confuse script in previous version
 
+      let tokens = tokensProvider.getTokens();
+      let token = matchToken(tokens, 'a', 2);
+
+      let firstAPosition = {line: 1, column: 4};
+      let secondAPosition = {line: 2, column: 4 + 5};
+
+      test_jump(token, secondAPosition, firstAPosition);
+    });
+
+
+    it('should recognize namespaces', () => {
+      model.value.text = `def x():
+    a = 1
+    x = a
+
+a = 2
+y = a`;
+
+      let tokens = tokensProvider.getTokens();
+      let token = matchToken(tokens, 'a', 4);
+
+      let thirdAPosition = {line: 4, column: 0};
+      let fourthAPosition = {line: 5, column: 5};
+
+      test_jump(token, fourthAPosition, thirdAPosition);
     });
 
   });

@@ -106,14 +106,28 @@ export class CodeMirrorExtension extends CodeMirrorTokensProvider implements IEd
 
     let cellTokens = this.editor.getTokens();
 
-    let usagesBeforeTarget = CodeMirrorExtension._countUsagesBefore(lookupName, target);
+    let typeFilterOn = (
+      target.className.includes('cm-variable')
+      ||
+      target.className.includes('cm-property')
+    );
+
+    let lookupType = (
+      target.className.indexOf('cm-variable') !== -1
+        ? 'variable'
+        : 'property'
+    );
+
+    let classFilter = 'cm-' + lookupType;
+
+    let usagesBeforeTarget = CodeMirrorExtension._countUsagesBefore(lookupName, target, classFilter, typeFilterOn);
 
     // select relevant token
     let token = null;
     let matchedTokensCount = 0;
     for (let j = 0; j < cellTokens.length; j++) {
       let testedToken = cellTokens[j];
-      if (testedToken.value === lookupName) {
+      if (testedToken.value === lookupName && (!typeFilterOn || lookupType === testedToken.type)) {
         matchedTokensCount += 1;
         if (matchedTokensCount - 1 === usagesBeforeTarget) {
           token = testedToken;
@@ -131,17 +145,14 @@ export class CodeMirrorExtension extends CodeMirrorTokensProvider implements IEd
       token = {
         value: lookupName,
         offset: 0, // dummy offset
-        type:
-          target.className.indexOf('cm-variable') !== -1
-            ? 'variable'
-            : 'property'
+        type: lookupType
       };
     }
 
     return token;
   }
 
-  static _countUsagesBefore(lookupName: string, target: Node) {
+  static _countUsagesBefore(lookupName: string, target: Node, classFilter: string, classFilterOn: boolean) {
 
     // count tokens with same value that occur before
     // (not all the tokens - to reduce the hurdle of
@@ -149,30 +160,48 @@ export class CodeMirrorExtension extends CodeMirrorTokensProvider implements IEd
     let usagesBeforeTarget = -1;
     let sibling = target as Node;
 
-    while (sibling != null) {
-      if (sibling.textContent === lookupName) {
+    const root = sibling.getRootNode();
+
+    // usually should not exceed that level, but to prevent huge files from trashing the UI...
+    let max_iter = 10000;
+
+    function stop_condition(node: Node) {
+      return !node || (node.nodeType == 1 && (node as HTMLElement).className.includes('CodeMirror-lines'))
+    }
+
+    while (!stop_condition(sibling) && !sibling.isEqualNode(root) && max_iter) {
+
+      if (
+        sibling.textContent === lookupName &&
+        (
+          !classFilterOn ||
+          (
+            sibling.nodeType === 1 &&
+            (sibling as HTMLElement).className.includes(classFilter)
+          )
+        )
+      ) {
         usagesBeforeTarget += 1;
       }
 
       let nextSibling = sibling.previousSibling;
 
-      if (nextSibling == null) {
-        // Try to traverse to previous line (if there is one).
-
-        // The additional parent (child) which is traversed
-        // both ways is a non-relevant presentation container.
-        let thisLine = sibling.parentNode.parentNode as HTMLElement;
-        let previousLine = thisLine.previousElementSibling;
-
-        // is is really a line?
-        if (
-          previousLine &&
-          previousLine.className.indexOf('CodeMirror-line') !== -1
-        ) {
-          nextSibling = previousLine.firstChild.lastChild;
+      while (nextSibling == null) {
+        while(!sibling.previousSibling) {
+          sibling = sibling.parentNode;
+          if (stop_condition(sibling)) {
+            return usagesBeforeTarget;
+          }
         }
+        sibling = sibling.previousSibling;
+        while (sibling.lastChild && sibling.textContent != lookupName) {
+          sibling = sibling.lastChild;
+        }
+        nextSibling = sibling;
       }
       sibling = nextSibling;
+
+      max_iter -= 1;
     }
 
     return usagesBeforeTarget;

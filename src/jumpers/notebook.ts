@@ -28,6 +28,10 @@ export class NotebookJumper extends CodeJumper {
     return this.widget.session.kernel;
   }
 
+  get cwd() {
+    return this.widget.model.modelDB.basePath.split('/').slice(0, -1).join('/')
+  }
+
   get editors() {
     return this.notebook.widgets.map((cell) => cell.editor)
   }

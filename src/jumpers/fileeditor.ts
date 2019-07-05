@@ -4,6 +4,7 @@ import { CodeJumper } from "./jumper";
 import { JumpHistory } from "../history";
 import { TokenContext } from "../languages/analyzer";
 import { IDocumentManager } from "@jupyterlab/docmanager";
+import { IDocumentWidget } from "@jupyterlab/docregistry";
 
 
 export class FileEditorJumper extends CodeJumper {
@@ -11,17 +12,23 @@ export class FileEditorJumper extends CodeJumper {
   editor: FileEditor;
   language: string;
   history: JumpHistory;
+  widget: IDocumentWidget;
 
-  constructor(editor: FileEditor, history: JumpHistory, document_manager: IDocumentManager) {
+  constructor(editor_widget: IDocumentWidget<FileEditor>, history: JumpHistory, document_manager: IDocumentManager) {
     super();
+    this.widget = editor_widget;
     this.document_manager = document_manager;
-    this.editor = editor;
+    this.editor = editor_widget.content;
     this.history = history;
-    this.setLanguageFromMime(editor.model.mimeType);
+    this.setLanguageFromMime(this.editor.model.mimeType);
 
-    editor.model.mimeTypeChanged.connect((session, mimeChanged) => {
+    this.editor.model.mimeTypeChanged.connect((session, mimeChanged) => {
       this.setLanguageFromMime(mimeChanged.newValue)
     });
+  }
+
+  get cwd() {
+    return this.widget.context.path.split('/').slice(0, -1).join('/')
   }
 
   setLanguageFromMime(mime: string){

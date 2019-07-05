@@ -101,12 +101,14 @@ export abstract class CodeJumper {
       // try to find variable assignment
       let definitions = analyzer.getDefinitions(token.value);
 
-
       if (definitions.length) {
-        // Get the last definition / assignment that appears before
-        // token of origin (is in an earlier cell or has lower offset),
-        let filtered = definitions.filter(
-          otherToken => i < stopIndex || otherToken.offset < originToken.offset
+        // Get definitions / assignments that appear before
+        // token of origin (are in an earlier cells or have lower offset),
+        let in_earlier_cell = i < stopIndex;
+        let filtered = (
+          in_earlier_cell
+            ? definitions  // all are in an earlier cell
+            : definitions.filter( otherToken => otherToken.offset < originToken.offset) // all are in same cell
         );
 
         // but ignore ones that are part of the same assignment expression,
@@ -115,11 +117,12 @@ export abstract class CodeJumper {
         // >>> a = a + 1
         // clicking on the last 'a' should jump to the first line,
         // and not to beginning of the second line.
-        filtered = definitions.filter(otherToken => {
+        filtered = filtered.filter(otherToken => {
           // If otherToken is in previous cell, we don't need to worry.
           if (i < stopIndex) {
             return true;
           }
+
           return !analyzer.isTokenInSameAssignmentExpression(
             otherToken, token
           );
@@ -169,13 +172,21 @@ export abstract class CodeJumper {
     return null
   }
 
+  abstract get cwd(): string;
+
   protected jump_to_cross_file_reference(context: TokenContext, cell_of_origin_analyzer: LanguageAnalyzer) {
 
     let potential_paths = cell_of_origin_analyzer.guessReferencePath(context);
+    if(this.cwd) {
+      let prefixed_with_cwd = potential_paths.map(path => this.cwd + '/' + path);
+      potential_paths = prefixed_with_cwd.concat(potential_paths);
+    }
 
-    if (cell_of_origin_analyzer.supportsKernel && this.kernel) {
+    let code = cell_of_origin_analyzer.referencePathQuery(context);
+
+    if (cell_of_origin_analyzer.supportsKernel && this.kernel && code) {
       cell_of_origin_analyzer.requestReferencePathFromKernel(
-        context, this.kernel,
+        code, this.kernel,
         msg => this.handle_path_from_kernel(msg, potential_paths)
       );
     } else {
