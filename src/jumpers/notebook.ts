@@ -7,15 +7,13 @@ import { IJump, IJumpPosition } from "../jump";
 import { _ensureFocus, _findCell, _findTargetCell } from "../notebook_private";
 import { JumpHistory } from "../history";
 import { TokenContext } from "../languages/analyzer";
-import { KernelMessage } from "@jupyterlab/services";
-import IIOPubMessage = KernelMessage.IIOPubMessage;
+import { Kernel } from "@jupyterlab/services";
 
 
 export class NotebookJumper extends CodeJumper {
 
   notebook: Notebook;
   history: JumpHistory;
-  document_manager: IDocumentManager;
   widget: NotebookPanel;
 
   constructor(notebook_widget: NotebookPanel, history: JumpHistory, document_manager: IDocumentManager) {
@@ -24,6 +22,10 @@ export class NotebookJumper extends CodeJumper {
     this.notebook = notebook_widget.content;
     this.history = history;
     this.document_manager = document_manager;
+  }
+
+  get kernel(): Kernel.IKernelConnection {
+    return this.widget.session.kernel;
   }
 
   get editors() {
@@ -54,27 +56,6 @@ export class NotebookJumper extends CodeJumper {
       activeEditor.setSelection({start: position, end: position});
     }, 0);
 
-  }
-
-  try_to_open_document(path: string) {
-    // TODO handle promises?
-    this.document_manager.services.contents.get(path, { content: false })
-    .then(() => {
-      this.document_manager.openOrReveal(path)
-    })
-    .catch(() => {})
-  }
-
-  handle_path_from_kernel(response: IIOPubMessage, fallback_paths: string[]) {
-    let obj: any = response.content;
-    if(obj.name === 'stdout') {
-      this.try_to_open_document(obj.text);
-    }
-    else if (response.header.msg_type === 'error') {
-      for(let path of fallback_paths) {
-        this.try_to_open_document(path);
-      }
-    }
   }
 
   jump_to_definition(jump: IJump, index?: number) {
@@ -110,24 +91,7 @@ export class NotebookJumper extends CodeJumper {
 
     if(cell_of_origin_analyzer.isCrossFileReference(context))
     {
-      let potential_paths = cell_of_origin_analyzer.guessReferencePath(context);
-
-      let kernel = this.widget.session.kernel;
-
-      if (cell_of_origin_analyzer.supportsKernel && kernel) {
-        cell_of_origin_analyzer.requestReferencePathFromKernel(
-          context, kernel,
-          msg => this.handle_path_from_kernel(msg, potential_paths)
-        );
-      }
-      else {
-        // if kernel is not available, try use the guessed paths
-        // try one by one
-        for(let path of potential_paths) {
-          this.try_to_open_document(path);
-        }
-      }
-
+      this.jump_to_cross_file_reference(context, cell_of_origin_analyzer)
     } else {
       // else, jump to the last definition in the current notebook:
       let {token, cellIndex} = this._findLastDefinition(jump.token, index);

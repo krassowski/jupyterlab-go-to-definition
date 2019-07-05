@@ -4,6 +4,11 @@ import { CodeEditor } from "@jupyterlab/codeeditor";
 import { IJump } from "../jump";
 import { chooseLanguageAnalyzer } from "../languages/chooser";
 import { CodeMirrorExtension } from "../editors/codemirror";
+import { IDocumentManager } from "@jupyterlab/docmanager";
+import { LanguageAnalyzer, TokenContext } from "../languages/analyzer";
+import { Kernel, KernelMessage } from "@jupyterlab/services";
+import IIOPubMessage = KernelMessage.IIOPubMessage;
+import { IDocumentWidget } from "@jupyterlab/docregistry";
 
 
 function hasCellMagic(tokens: CodeEditor.IToken[]) {
@@ -43,6 +48,9 @@ const cell_magic_lang_to_tokenizer : any = {
 export abstract class CodeJumper {
 
   abstract language: string;
+
+  document_manager: IDocumentManager;
+  widget: IDocumentWidget;
 
   abstract jump_to_definition(jump: IJump): void
 
@@ -134,5 +142,49 @@ export abstract class CodeJumper {
       token: definitionToken,
       cellIndex: definitionIndex
     };
+  }
+
+  try_to_open_document(path: string) {
+    // TODO handle promises?
+    this.document_manager.services.contents.get(path, {content: false})
+      .then(() => {
+        this.document_manager.openOrReveal(path);
+      })
+      .catch(() => {
+      });
+  }
+
+  handle_path_from_kernel(response: IIOPubMessage, fallback_paths: string[]) {
+    let obj: any = response.content;
+    if (obj.name === 'stdout') {
+      this.try_to_open_document(obj.text);
+    } else if (response.header.msg_type === 'error') {
+      for (let path of fallback_paths) {
+        this.try_to_open_document(path);
+      }
+    }
+  }
+
+  get kernel(): Kernel.IKernelConnection {
+    return null
+  }
+
+  protected jump_to_cross_file_reference(context: TokenContext, cell_of_origin_analyzer: LanguageAnalyzer) {
+
+    let potential_paths = cell_of_origin_analyzer.guessReferencePath(context);
+
+    if (cell_of_origin_analyzer.supportsKernel && this.kernel) {
+      cell_of_origin_analyzer.requestReferencePathFromKernel(
+        context, this.kernel,
+        msg => this.handle_path_from_kernel(msg, potential_paths)
+      );
+    } else {
+      // if kernel is not available, try use the guessed paths
+      // try one by one
+      for (let path of potential_paths) {
+        this.try_to_open_document(path);
+      }
+    }
+
   }
 }

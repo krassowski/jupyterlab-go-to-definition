@@ -39,7 +39,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
       if (fileEditor.editor instanceof CodeMirrorEditor) {
 
-        let jumper = new FileEditorJumper(fileEditor, jump_history);
+        let jumper = new FileEditorJumper(fileEditor, jump_history, documentManager);
         let extension = new CodeMirrorExtension(fileEditor.editor, jumper);
 
         extension.connect();
@@ -161,7 +161,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       execute: () => {
         let fileEditor = fileEditorTracker.currentWidget.content;
 
-        let jumper = new FileEditorJumper(fileEditor, jump_history);
+        let jumper = new FileEditorJumper(fileEditor, jump_history, documentManager);
         let editor = fileEditor.editor;
 
         let position = editor.getCursorPosition();
@@ -177,7 +177,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       execute: () => {
         let fileEditor = fileEditorTracker.currentWidget.content;
 
-        let jumper = new FileEditorJumper(fileEditor, jump_history);
+        let jumper = new FileEditorJumper(fileEditor, jump_history, documentManager);
         jumper.jump_back()
       },
       isEnabled: isEnabled(fileEditorTracker)
