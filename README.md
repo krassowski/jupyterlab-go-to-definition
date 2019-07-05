@@ -21,7 +21,7 @@ Simple jumping to files is possible** - click on the name of a module in Python 
 
 Safari users: Safari does not implement `MouseEvent.getModifierState` (see [#3](https://github.com/krassowski/jupyterlab-go-to-definition/issues/3)), thus only <kbd>Alt</kbd>, <kbd>Control</kbd>, <kbd>Shift</kbd> and <kbd>Meta</kbd> are supported.
 
-\*\*) if those are within reach of JupyterLab - which usually limits opening of files to the level of the starting dirctory.
+\*\*) if those are within reach of JupyterLab - which usually limits opening of files to the level of the starting directory.
 
 ## Prerequisites
 
