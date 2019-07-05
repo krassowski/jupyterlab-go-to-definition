@@ -67,14 +67,13 @@ describe('RAnalyzer', () => {
       model.value.text = 'for (x in 1:10){}';
       expect(analyzer.isForLoop(tokenNeighbourhood('x'))).to.be.true;
     });
-
   });
 
   describe('#isImport', () => {
 
     it('should recognize the most common ways to load namespaces', () => {
       model.value.text = 'library(shiny)\nshiny::p';
-      expect(analyzer.isImport(tokenNeighbourhood('shiny', 1))).to.be.true;
+      expect(analyzer.isImport(tokenNeighbourhood('shiny'))).to.be.true;
 
       model.value.text = 'require(dplyr)\ndplyr:filter';
       expect(analyzer.isImport(tokenNeighbourhood('dplyr'))).to.be.true;
@@ -83,9 +82,33 @@ describe('RAnalyzer', () => {
     it('should work with R "import" package', () => {
 
       model.value.text = 'import::here(fun_a, fun_b, .from = "other_resources.R")';
-      expect(analyzer.isImport(tokenNeighbourhood('fun_a', 1))).to.be.true;
-      expect(analyzer.isImport(tokenNeighbourhood('fun_b', 1))).to.be.true;
+      expect(analyzer.isImport(tokenNeighbourhood('fun_a'))).to.be.true;
+      expect(analyzer.isImport(tokenNeighbourhood('fun_b'))).to.be.true;
+
+      // TODO: import::from
+    })
+
+  });
+
+  describe('#isCrossFileReference', () => {
+
+    it('should recognize source', () => {
+      model.value.text = "source('test.R')";
+      expect(analyzer.isCrossFileReference(tokenNeighbourhood('source'))).to.be.true;
+
+      model.value.text = 'source("test.R")';
+      expect(analyzer.isCrossFileReference(tokenNeighbourhood('source'))).to.be.true;
+    });
+
+    it('should work with R "import" package', () => {
+
+      model.value.text = 'import::here(fun_a, fun_b, .from = "other_resources.R")';
+      expect(analyzer.isCrossFileReference(tokenNeighbourhood('.from'))).to.be.true;
+
+
+      expect(analyzer.guessReferencePath(tokenNeighbourhood('.from'))).to.eql(['other_resources.R'])
     })
 
   })
+
 });
