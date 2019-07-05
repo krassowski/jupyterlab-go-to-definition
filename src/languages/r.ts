@@ -21,8 +21,8 @@ export class RAnalyzer extends LanguageWithOptionalSemicolons {
   }
 
   // Matching standalone variable assignment:
-  isStandaloneAssignment(siblings: TokenContext) {
-    let { previous, next } = siblings;
+  isStandaloneAssignment(context: TokenContext) {
+    let { previous, next } = context;
     return (
       // standard, leftwards assignments:
       (next.exists && this.isAssignment(next))
@@ -35,18 +35,30 @@ export class RAnalyzer extends LanguageWithOptionalSemicolons {
   }
 
   // Matching imports:
-  isImport(siblings: TokenContext) {
-    let { previous } = siblings;
-    return (
+  isImport(context: TokenContext) {
+    let { previous } = context;
+
+    if (
       previous.exists &&
       previous.type === 'variable' &&
       (previous.value === 'library' || previous.value === 'require')
     )
+      return true;
+
+    previous = this.traverse_left(previous, ', ');
+
+    if (
+      previous.exists && previous.value == 'here' && previous.type == 'variable' &&
+      previous.previous.value == '::' && previous.previous.previous.value === 'import'
+    )
+      return true;
+
+    return false
   }
 
   // Matching `for` loop and comprehensions:
-  isForLoop(siblings: TokenContext) {
-    let { previous, next } = siblings;
+  isForLoop(context: TokenContext) {
+    let { previous, next } = context;
     return (
       previous.exists &&
       previous.type === 'keyword' &&

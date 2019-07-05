@@ -78,6 +78,13 @@ describe('RAnalyzer', () => {
 
       model.value.text = 'require(dplyr)\ndplyr:filter';
       expect(analyzer.isImport(tokenNeighbourhood('dplyr'))).to.be.true;
+    });
+
+    it('should work with R "import" package', () => {
+
+      model.value.text = 'import::here(fun_a, fun_b, .from = "other_resources.R")';
+      expect(analyzer.isImport(tokenNeighbourhood('fun_a', 1))).to.be.true;
+      expect(analyzer.isImport(tokenNeighbourhood('fun_b', 1))).to.be.true;
     })
 
   })

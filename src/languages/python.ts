@@ -119,26 +119,6 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
     )
   }
 
-  traverse_left(previous: TokenContext, step_on: string) {
-    let is_dot = previous.simple_next === step_on;
-
-    while (is_dot) {
-      previous = previous.previous;
-      is_dot = previous.simple_next === step_on;
-    }
-    return previous
-  }
-
-  traverse_right(next: TokenContext, step_on: string) {
-    let is_dot = next.simple_previous === step_on;
-
-    while (is_dot) {
-      next = next.next;
-      is_dot = next.simple_previous === step_on;
-    }
-    return next
-  }
-
   isCrossFileReference(context: TokenContext): boolean {
 
     // from a import b; from a.b import c
