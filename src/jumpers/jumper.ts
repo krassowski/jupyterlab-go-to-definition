@@ -162,7 +162,8 @@ export abstract class CodeJumper {
     if (obj.name === 'stdout') {
       this.try_to_open_document(obj.text);
     } else if (response.header.msg_type === 'error') {
-      console.error(response);
+      console.error('Failed to resolve the paths from kernel; falling back to guessing the path locations');
+      console.log(response);
       for (let path of fallback_paths) {
         this.try_to_open_document(path);
       }
