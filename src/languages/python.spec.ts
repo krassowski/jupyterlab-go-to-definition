@@ -75,6 +75,23 @@ describe('PythonAnalyzer', () => {
     });
   });
 
+  // TODO: output of R cell magic (%%R), which usually comes along many other parameters:
+  //  %%R -o x                  # simple case
+  //  %%R -i y -o x -w 800      # case with other parameters
+  //  should this be handled by R or Python analyzer?
+  //  in broader terms, should the variables scopes be separated between languages?
+  describe('#isRMagicOutput()', () => {
+
+    it('should simple line magic export from R', () => {
+      model.value.text = '%R -o x';
+      expect(runWithSelectedToken(analyzer.isRMagicOutput, 'x')).to.be.true;
+
+      model.value.text = '%R -o x x = 1';
+      expect(runWithSelectedToken(analyzer.isRMagicOutput, 'x')).to.be.true;
+      expect(runWithSelectedToken(analyzer.isRMagicOutput, 'x', 2)).to.be.false;
+    });
+  });
+
   describe('#isStoreMagic()', () => {
 
     it('should recognize IPython %store -r magic function', () => {

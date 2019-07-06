@@ -53,7 +53,8 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
     this.isWithStatement,
     this.isForLoopOrComprehension,
     this.isTupleUnpacking,
-    this.isStoreMagic
+    this.isStoreMagic,
+    this.isRMagicOutput
   ];
 
   // Matching standalone variable assignment:
@@ -81,17 +82,25 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
     };
   }
 
-  // IPython %store -r magic:
-  isStoreMagic(context: TokenContext) {
+  _is_magic_export(context: TokenContext, magic: string, export_arg: string, nargs: number = 1) {
     let { previous } = context;
 
-    let switch_test = this._is_magic_switch(previous, 'r');
+    let switch_test = this._is_magic_switch(previous, export_arg, nargs);
     if (!switch_test.is_switch)
       return false;
 
-    let store = switch_test.switch.previous.previous;
-    let percent = store.simple_previous;
-    return store.value === 'store' && percent === '%'
+    let magic_token = switch_test.switch.previous.previous;
+    let percent = magic_token.simple_previous;
+    return magic_token.value === magic && percent === '%'
+  }
+
+  // IPython %store -r magic:
+  isStoreMagic(context: TokenContext) {
+    return this._is_magic_export(context, 'store', 'r', 20);
+  }
+
+  isRMagicOutput(context: TokenContext) {
+    return this._is_magic_export(context, 'R', 'o', 1);
   }
 
   // Matching imports:
