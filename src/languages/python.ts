@@ -63,49 +63,35 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
     return next.exists && this.isAssignment(next)
   }
 
+  _is_magic_switch(candidate: TokenContext, key: string, max_args=20) {
+
+    while (max_args && candidate.exists) {
+      if(candidate.value === key && candidate.simple_previous === '-') {
+        break;
+      }
+      candidate = candidate.previous;
+      max_args -= 1;
+    }
+
+    let is_switch = max_args !== 0;
+
+    return {
+      'is_switch': is_switch,
+      'switch': is_switch ? candidate : null
+    };
+  }
+
   // IPython %store -r magic:
   isStoreMagic(context: TokenContext) {
-    // this may be much better using regexpr
-    // (and more compatible with other engines, but possibly slower)
-    let { previous, index, tokens } = context;
+    let { previous } = context;
 
-    if (previous.exists && previous.value === 'r') {
-      let r_pos = index - 2;
-      let has_r_switch = false;
-
-      while (index - r_pos < 10 && r_pos >= 3) {
-
-        if (tokens[r_pos].value === 'r') {
-          if (tokens[r_pos - 1].value === '-') {
-            has_r_switch = true;
-          }
-          break;
-        }
-        if (tokens[r_pos].value.trim() != '') {
-          return false;
-        }
-        r_pos -= 1;
-
-      }
-      if (!has_r_switch) {
-        return false;
-      }
-
-      let store_pos = r_pos - 2;
-      while (r_pos - store_pos < 10 && store_pos >= 1) {
-        if (tokens[store_pos].value === 'store') {
-          if (tokens[store_pos - 1].value === '%') {
-            return true;
-          }
-        }
-        if (tokens[store_pos].value.trim() != '') {
-          return false;
-        }
-        store_pos -= 1;
-      }
+    let switch_test = this._is_magic_switch(previous, 'r');
+    if (!switch_test.is_switch)
       return false;
-    }
-    return false;
+
+    let store = switch_test.switch.previous.previous;
+    let percent = store.simple_previous;
+    return store.value === 'store' && percent === '%'
   }
 
   // Matching imports:

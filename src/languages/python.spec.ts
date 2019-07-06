@@ -80,6 +80,16 @@ describe('PythonAnalyzer', () => {
     it('should recognize IPython %store -r magic function', () => {
       model.value.text = '%store -r x';
       expect(runWithSelectedToken(analyzer.isStoreMagic, 'x')).to.be.true;
+
+      model.value.text = '%store -r x y';
+      expect(runWithSelectedToken(analyzer.isStoreMagic, 'x')).to.be.true;
+      expect(runWithSelectedToken(analyzer.isStoreMagic, 'y')).to.be.true;
+
+      model.value.text = '%store -r r store';
+      expect(runWithSelectedToken(analyzer.isStoreMagic, 'r', 1)).to.be.false;
+      expect(runWithSelectedToken(analyzer.isStoreMagic, 'store', 1)).to.be.false;
+      expect(runWithSelectedToken(analyzer.isStoreMagic, 'r', 2)).to.be.true;
+      expect(runWithSelectedToken(analyzer.isStoreMagic, 'store', 2)).to.be.true;
     });
 
     it('should ignore other look-alikes', () => {
@@ -227,9 +237,9 @@ describe('PythonAnalyzer', () => {
     });
 
     // TODO:
-    // from .a import *
-    // from . import b
-    // %run helpers/notebook_setup.ipynb
+    //  from . import b
+    //  %run helpers/notebook_setup.ipynb
+    //  %R source('a.R') # line magic of R in Python
   })
 });
 

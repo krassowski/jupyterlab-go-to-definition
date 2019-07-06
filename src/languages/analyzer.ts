@@ -29,7 +29,7 @@ export class TokenContext implements CodeEditor.IToken {
   }
 
   get simple_previous() {
-    return this.index - 1 > 0 ? this.tokens[this.index - 1].value : null
+    return this.index - 1 >= 0 ? this.tokens[this.index - 1].value : null
   }
 
   get previous() {
@@ -49,7 +49,7 @@ export class TokenContext implements CodeEditor.IToken {
     return this._next;
   }
 
-  get value() { return this.token.value; }
+  get value() { return this.token ? this.token.value : undefined; }
   get type() { return this.token.type; }
   get offset() { return this.token.offset; }
   get exists() { return !!this.token }
