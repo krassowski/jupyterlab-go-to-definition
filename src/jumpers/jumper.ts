@@ -162,6 +162,7 @@ export abstract class CodeJumper {
     if (obj.name === 'stdout') {
       this.try_to_open_document(obj.text);
     } else if (response.header.msg_type === 'error') {
+      console.error(response);
       for (let path of fallback_paths) {
         this.try_to_open_document(path);
       }
