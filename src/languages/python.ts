@@ -187,23 +187,52 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
     let parts = this._imports_breadcrumbs(context);
     let value  = parts.join('.');
 
+    // TODO: there should be a setting to disable symlinks use
+    //  as some users might prefer not to have an additional folder
+
     if(/^[a-zA-Z_.]+$/.test(value)) {
       // just in case to prevent arbitrary execution
       return `
+from __future__ import print_function
+
 try:
-    from importlib.util import find_spec
-    import pathlib
-    print(
-        pathlib.Path(
-          find_spec('` + value + `').origin
-        ).relative_to(pathlib.Path.cwd()),
-        end=''
-    )
+    def _get_path(value):
+        """Returns (path, is_sym_link) tuple"""
+        from importlib.util import find_spec
+        from pathlib import Path
+
+        path = Path(find_spec(value).origin)
+        cwd = Path.cwd()
+
+        # the simple case
+        if cwd in path.parents:
+            return path.relative_to(cwd), False
+
+        symlinks_dir = Path('.jupyter_symlinks')
+        symlinks_dir.mkdir(exist_ok=True)
+        # relative pathways could lead out of the starting dir as well (e.g. using .. construct on Linux)
+        path = path.absolute().resolve()
+
+        # remove anchor (root slash/drive etc)
+        sub_path = path.relative_to(path.anchor)
+
+        # TODO: add drive to avoid confusion on Windows
+        symlink = symlinks_dir / sub_path
+        symlink.parent.mkdir(exist_ok=True, parents=True)
+        try:
+            symlink.unlink()
+        except FileNotFoundError:
+            pass
+        assert not symlink.is_absolute()
+        symlink.symlink_to(path)
+        return symlink, True
+
+    print(_get_path('` + value + `')[0], end='')
+
 except Exception:
     # Python 2.7, untested
     import imp
     # TODO: this is not the best idea. JSON might be better
-    from __future__ import print_function
     print(imp.find_module('` + value + `')[1], end='')
 `
     }
