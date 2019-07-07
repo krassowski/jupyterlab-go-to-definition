@@ -240,7 +240,7 @@ export abstract class LanguageWithOptionalSemicolons extends LanguageAnalyzer {
   traverse_left(previous: TokenContext, step_on: string) {
     let is_sep = step_on.includes(previous.simple_next);
 
-    while (is_sep) {
+    while (is_sep && previous.exists) {
       previous = previous.previous;
       is_sep = step_on.includes(previous.simple_next);
     }
@@ -250,7 +250,7 @@ export abstract class LanguageWithOptionalSemicolons extends LanguageAnalyzer {
   traverse_right(next: TokenContext, step_on: string) {
     let is_sep = step_on.includes(next.simple_previous);
 
-    while (is_sep) {
+    while (is_sep && next.exists) {
       next = next.next;
       is_sep = step_on.includes(next.simple_previous);
     }
