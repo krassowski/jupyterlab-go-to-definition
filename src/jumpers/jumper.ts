@@ -153,20 +153,29 @@ export abstract class CodeJumper {
   }
 
   try_to_open_document(path: string, line_number=0) {
-    // TODO handle promises?
+
     this.document_manager.services.contents.get(path, {content: false})
       .then(() => {
         let document_widget = this.document_manager.openOrReveal(path);
-        let document_jumper = new FileEditorJumper(
-          document_widget as IDocumentWidget<FileEditor>,
-          this.history, this.document_manager
-        );
-        document_jumper.jump({
-          token: {
-            offset: document_jumper.editor.editor.getOffsetAt({line: line_number, column: 0}),
-            value: '',
-          },
-        })
+
+        document_widget.revealed.then(() => {
+
+          let editor_widget = document_widget as IDocumentWidget<FileEditor>;
+          //editor_widget.title.caption
+
+          let document_jumper = new FileEditorJumper(
+            editor_widget,
+            this.history, this.document_manager
+          );
+
+          document_jumper.jump({
+            token: {
+              offset: document_jumper.editor.editor.getOffsetAt({line: line_number, column: 0}),
+              value: '',
+            },
+          });
+
+        });
       })
       .catch(() => {
       });
@@ -236,11 +245,15 @@ export abstract class CodeJumper {
     let obj: any = response.content;
     if (obj.name === 'stdout') {
       let data = JSON.parse(obj.text);
+      if(!data.hasOwnProperty('path')) {
+        console.error('Failed to resolve the paths from kernel; falling back to guessing the path locations');
+        console.log(response);
+        fallback()
+      }
       let line_number = data['line_number'];
       this.try_to_open_document(data['path'], line_number - 1);
 
       console.log('Outside of project directory?', data['is_symlink']);
-      console.log('Line number?', line_number);
     } else if (response.header.msg_type === 'error') {
       console.error('Failed to resolve the paths from kernel; falling back to guessing the path locations');
       console.log(response);
