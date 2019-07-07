@@ -45,6 +45,10 @@ import json
 from pathlib import Path
 
 def jupyter_lab_consumable_path(path):
+    # if the definition is in current notebook, the path is not known on the kernel side
+    if not path:
+        return {'path': None, 'is_symlink': False}
+
     path = Path(path)
     cwd = Path.cwd()
 
@@ -194,24 +198,26 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
 
   supportsKernel = true;
 
-  _imports_breadcrumbs(context: TokenContext) {
+  _breadcrumbs(context: TokenContext, allow_import_dots_upfront=false) {
     let { previous, token } = context;
 
     let parts: string[] = [];
     let is_dot = previous.simple_next === '.';
 
-    while (is_dot) {
+    while (is_dot && previous.exists) {
       parts.push(previous.value);
       previous = previous.previous;
       is_dot = previous.simple_next === '.';
     }
 
-    // relative imports
-    if (previous.simple_previous === '.') {
-      parts.push('')
-    }
-    if (previous.simple_previous === '..') {
-      parts.push('.')
+    if (allow_import_dots_upfront) {
+      // relative imports
+      if (previous.simple_previous === '.') {
+        parts.push('')
+      }
+      if (previous.simple_previous === '..') {
+        parts.push('.')
+      }
     }
 
     parts = parts.reverse();
@@ -221,24 +227,46 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
     return parts
   }
 
+  _imports_breadcrumbs(context: TokenContext) {
+    return this._breadcrumbs(context, true)
+  }
+
+
   definitionLocationQuery(context: TokenContext) {
-    let value = context.value;
+    let parts = this._breadcrumbs(context);
+    let value  = parts.join('.');
+
     if(/^[a-zA-Z_.]+$/.test(value)) {
       return python_setup + `
+
+def _extract_object(breadcrumbs, available_objects):
+    obj = available_objects[breadcrumbs[0]]
+
+    for name in breadcrumbs[1:]:
+        obj = getattr(obj, name)
+    return obj
+
+
 def _locate_definition(name):
     """Returns (line_number, path, is_sym_link) tuple"""
     from inspect import getsourcefile, getsourcelines
 
     available_objects = globals()
+    input_number = None
 
-    if name not in available_objects:
-      return
-
-    obj = available_objects[name]
+    try:
+        obj = _extract_object(name.split('.'), available_objects)
+    except (KeyError, AttributeError):
+        return
 
     try:
         path = getsourcefile(obj)
-    except TypeError:
+        path_exists = Path(path).exists()
+        if not path_exists:
+            assert path.startswith('<ipython-input-')
+            input_number = int(path.split('-')[2])
+            path = None
+    except (TypeError, AssertionError):
         path = None
 
     try:
@@ -248,6 +276,7 @@ def _locate_definition(name):
 
     return {
         'line_number': line_number,
+        'input_number': input_number,
         **jupyter_lab_consumable_path(path)
     } 
 

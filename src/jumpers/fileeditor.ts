@@ -1,10 +1,11 @@
 import { FileEditor } from "@jupyterlab/fileeditor";
 import { IJump, IJumpPosition } from "../jump";
-import { CodeJumper } from "./jumper";
+import { CodeJumper, jumpers } from "./jumper";
 import { JumpHistory } from "../history";
 import { TokenContext } from "../languages/analyzer";
 import { IDocumentManager } from "@jupyterlab/docmanager";
 import { IDocumentWidget } from "@jupyterlab/docregistry";
+import { CodeEditor } from "@jupyterlab/codeeditor";
 
 
 export class FileEditorJumper extends CodeJumper {
@@ -93,4 +94,21 @@ export class FileEditorJumper extends CodeJumper {
     if (previous_position)
       this.jump(previous_position)
   }
+
+  getOffset(position: CodeEditor.IPosition) {
+    return this.editor.editor.getOffsetAt(position);
+  }
+
+  getJumpPosition(position: CodeEditor.IPosition): IJumpPosition {
+    return {
+      token: {
+        offset: this.getOffset(position),
+        value: ''
+      },
+      index: 0
+    }
+  }
 }
+
+
+jumpers.set('fileeditor', FileEditorJumper);

@@ -1,7 +1,7 @@
 import { CodeMirrorEditor } from "@jupyterlab/codemirror";
 import { CodeEditor } from "@jupyterlab/codeeditor";
 
-import { IJump } from "../jump";
+import { IJump, IJumpPosition } from "../jump";
 import { chooseLanguageAnalyzer } from "../languages/chooser";
 import { CodeMirrorExtension } from "../editors/codemirror";
 import { IDocumentManager } from "@jupyterlab/docmanager";
@@ -9,9 +9,7 @@ import { LanguageAnalyzer, TokenContext } from "../languages/analyzer";
 import { Kernel, KernelMessage } from "@jupyterlab/services";
 import IIOPubMessage = KernelMessage.IIOPubMessage;
 import { IDocumentWidget } from "@jupyterlab/docregistry";
-import { FileEditorJumper } from "./fileeditor";
 import { JumpHistory } from "../history";
-import { FileEditor } from "@jupyterlab/fileeditor";
 
 
 function hasCellMagic(tokens: CodeEditor.IToken[]) {
@@ -113,7 +111,7 @@ export abstract class CodeJumper {
         let filtered = (
           in_earlier_cell
             ? definitions  // all are in an earlier cell
-            : definitions.filter( otherToken => otherToken.offset < originToken.offset) // all are in same cell
+            : definitions.filter(otherToken => otherToken.offset < originToken.offset) // all are in same cell
         );
 
         // but ignore ones that are part of the same assignment expression,
@@ -152,33 +150,41 @@ export abstract class CodeJumper {
     };
   }
 
-  try_to_open_document(path: string, line_number=0) {
+  private go_to_position(document_widget: IDocumentWidget, jumper: string, column: number, line_number: number, input_number = 0) {
 
-    this.document_manager.services.contents.get(path, {content: false})
-      .then(() => {
-        let document_widget = this.document_manager.openOrReveal(path);
+    let document_jumper: CodeJumper;
 
-        document_widget.revealed.then(() => {
+    let position = {line: line_number, column: column};
 
-          let editor_widget = document_widget as IDocumentWidget<FileEditor>;
-          //editor_widget.title.caption
+    let document_jumper_type = jumpers.get(jumper);
 
-          let document_jumper = new FileEditorJumper(
-            editor_widget,
-            this.history, this.document_manager
-          );
+    document_jumper = new document_jumper_type(
+      document_widget, this.history, this.document_manager
+    );
 
-          document_jumper.jump({
-            token: {
-              offset: document_jumper.editor.editor.getOffsetAt({line: line_number, column: 0}),
-              value: '',
-            },
+    document_jumper.jump(document_jumper.getJumpPosition(position, input_number));
+  }
+
+  try_to_open_document(path: string, line_number = 0, input_number: number = null, column: number = 0) {
+
+    if (input_number && !path && this.constructor.name === 'NotebookJumper') {
+      // the definition is in this notebook
+
+      this.go_to_position(this.widget, 'notebook', column, line_number, input_number)
+
+    } else {
+      this.document_manager.services.contents.get(path, {content: false})
+        .then(() => {
+          let document_widget = this.document_manager.openOrReveal(path);
+
+          document_widget.revealed.then(() => {
+            this.go_to_position(document_widget, 'fileeditor', column, line_number, input_number)
           });
-
+        })
+        .catch(() => {
         });
-      })
-      .catch(() => {
-      });
+    }
+
   }
 
   handle_path_from_kernel(response: IIOPubMessage, fallback_paths: string[]) {
@@ -218,7 +224,7 @@ export abstract class CodeJumper {
   protected jump_to_cross_file_reference(context: TokenContext, cell_of_origin_analyzer: LanguageAnalyzer) {
 
     let potential_paths = cell_of_origin_analyzer.guessReferencePath(context);
-    if(this.cwd) {
+    if (this.cwd) {
       let prefixed_with_cwd = potential_paths.map(path => this.cwd + '/' + path);
       potential_paths = prefixed_with_cwd.concat(potential_paths);
     }
@@ -231,7 +237,7 @@ export abstract class CodeJumper {
         msg => this.handle_path_from_kernel(msg, potential_paths) // TODO: extract fallback?
       );
     } else {
-       // TODO: extract fallback?
+      // TODO: extract fallback?
       // if kernel is not available, try use the guessed paths
       // try one by one
       for (let path of potential_paths) {
@@ -245,13 +251,14 @@ export abstract class CodeJumper {
     let obj: any = response.content;
     if (obj.name === 'stdout') {
       let data = JSON.parse(obj.text);
-      if(!data.hasOwnProperty('path')) {
+      if (!data) {
+        // not a definition that the server can resolve, carry on
         console.error('Failed to resolve the paths from kernel; falling back to guessing the path locations');
         console.log(response);
         fallback()
       }
       let line_number = data['line_number'];
-      this.try_to_open_document(data['path'], line_number - 1);
+      this.try_to_open_document(data['path'], line_number - 1, data['input_number']);
 
       console.log('Outside of project directory?', data['is_symlink']);
     } else if (response.header.msg_type === 'error') {
@@ -276,4 +283,13 @@ export abstract class CodeJumper {
     }
 
   }
+
+  abstract jump(position: IJumpPosition): void;
+
+  abstract getOffset(position: CodeEditor.IPosition, cell?: number): number;
+
+  abstract getJumpPosition(position: CodeEditor.IPosition, input_number?: number): IJumpPosition;
 }
+
+
+export let jumpers: Map<string, any> = new Map();

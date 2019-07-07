@@ -2,12 +2,14 @@ import { Notebook, NotebookPanel } from "@jupyterlab/notebook";
 import { nbformat } from '@jupyterlab/coreutils';
 import { IDocumentManager } from '@jupyterlab/docmanager';
 
-import { CodeJumper } from "./jumper";
+import { CodeJumper, jumpers } from "./jumper";
 import { IJump, IJumpPosition } from "../jump";
 import { _ensureFocus, _findCell, _findTargetCell } from "../notebook_private";
 import { JumpHistory } from "../history";
 import { TokenContext } from "../languages/analyzer";
 import { Kernel } from "@jupyterlab/services";
+import { CodeEditor } from "@jupyterlab/codeeditor";
+import { ICodeCellModel } from "@jupyterlab/cells"
 
 
 export class NotebookJumper extends CodeJumper {
@@ -100,6 +102,14 @@ export class NotebookJumper extends CodeJumper {
       // if has location:
       // open tab with the file
       this.inspect_and_jump(context, cell_of_origin_analyzer, () => {
+        // TODO when reassigning objects:
+        //   def xyz(): pass
+        //   a = xyz
+        //   x = a
+        //  click on the last 'a' will lead to a jump to 'def xyz(): pass' instead to 'a = xyz'
+        //  when using kernel for resolution. This may not be the expected behaviour!
+        //  maybe we should first try to _findLastDefinition and only jump with kernel if none found
+        //  (plus as an option - when user presses a different combination, it could be labeled "deep jump")
 
         // if it fails, jump to the last definition in the current notebook:
         let {token, cellIndex} = this._findLastDefinition(jump.token, index);
@@ -123,4 +133,41 @@ export class NotebookJumper extends CodeJumper {
       this.jump(previous_position)
   }
 
+  getOffset(position: CodeEditor.IPosition, cell: number = 0) {
+    return this.editors[cell].getOffsetAt(position)
+  }
+
+  getJumpPosition(position: CodeEditor.IPosition, input_number: number) {
+
+    let cells = this.widget.model.cells.iter();
+    let cell = cells.next();
+
+    let i = 0;
+    let cell_index: number;
+
+    while(cell) {
+      if (cell.type === 'code') {
+        let code_cell = cell as ICodeCellModel;
+        if (code_cell.executionCount === input_number) {
+          cell_index = i;
+          break;
+        }
+      }
+      cell = cells.next();
+      i += 1;
+    }
+
+    // TODO: what if we cannot get the cell index?
+
+    return {
+      token: {
+        offset: this.getOffset(position, cell_index),
+        value: ''
+      },
+      index: cell_index
+    };
+  }
+
 }
+
+jumpers.set('notebook', NotebookJumper);

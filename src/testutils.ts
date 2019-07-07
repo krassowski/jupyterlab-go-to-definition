@@ -1,6 +1,6 @@
 import { CodeJumper } from "./jumpers/jumper";
 import { CodeEditor } from "@jupyterlab/codeeditor";
-import { IJump } from "./jump";
+import { IJump, IJumpPosition } from "./jump";
 
 
 export function matchToken(tokens: ReadonlyArray<CodeEditor.IToken>, tokenName: string, tokenOccurrence = 1, tokenType = 'variable'): CodeEditor.IToken {
@@ -36,4 +36,8 @@ export class Jumper extends CodeJumper {
     let position = this.editor.getPositionAt(token.offset);
     this.editor.setSelection({start: position, end: position});
   }
+
+  jump(position: IJumpPosition): void {}
+  getOffset(position: CodeEditor.IPosition, cell?: number): number {return 0}
+  getJumpPosition(position: CodeEditor.IPosition, input_number: number): IJumpPosition {return undefined;}
 }
