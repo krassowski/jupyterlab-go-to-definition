@@ -40,6 +40,45 @@ function evaluateSkippingBrackets(tokens: ReadonlyArray<IToken>, indexShift: num
 }
 
 
+const python_setup = `
+import json
+from pathlib import Path
+
+def jupyter_lab_consumable_path(path):
+    path = Path(path)
+    cwd = Path.cwd()
+
+    # the simple case
+    if cwd in path.parents:
+        return {
+            'path': str(path.relative_to(cwd)),
+            'is_symlink': False
+        }
+
+    symlinks_dir = Path('.jupyter_symlinks')
+    symlinks_dir.mkdir(exist_ok=True)
+    # relative pathways could lead out of the starting dir as well (e.g. using .. construct on Linux)
+    path = path.absolute().resolve()
+
+    # remove anchor (root slash/drive etc)
+    sub_path = path.relative_to(path.anchor)
+
+    # TODO: add drive to avoid confusion on Windows
+    symlink = symlinks_dir / sub_path
+    symlink.parent.mkdir(exist_ok=True, parents=True)
+    try:
+        symlink.unlink()
+    except FileNotFoundError:
+        pass
+    assert not symlink.is_absolute()
+    symlink.symlink_to(path)
+    return {
+        'path': str(symlink),
+        'is_symlink': True
+    }
+`;
+
+
 export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
 
   // idea for improvement:
@@ -182,58 +221,61 @@ export class PythonAnalyzer extends LanguageWithOptionalSemicolons {
     return parts
   }
 
+  definitionLocationQuery(context: TokenContext) {
+    let value = context.value;
+    if(/^[a-zA-Z_.]+$/.test(value)) {
+      return python_setup + `
+def _locate_definition(name):
+    """Returns (line_number, path, is_sym_link) tuple"""
+    from inspect import getsourcefile, getsourcelines
+
+    available_objects = globals()
+
+    if name not in available_objects:
+      return
+
+    obj = available_objects[name]
+
+    try:
+        path = getsourcefile(obj)
+    except TypeError:
+        path = None
+
+    try:
+        line_number = getsourcelines(obj)[1]
+    except OSError:
+        line_number = 0
+
+    return {
+        'line_number': line_number,
+        **jupyter_lab_consumable_path(path)
+    } 
+
+print(json.dumps(_locate_definition('` + value + `')), end='')
+`
+
+    }
+  }
+
   referencePathQuery(context: TokenContext) {
 
     let parts = this._imports_breadcrumbs(context);
     let value  = parts.join('.');
 
-    // TODO: there should be a setting to disable symlinks use
-    //  as some users might prefer not to have an additional folder
+    // TODO: recognize Python version and return no query (or another Python2-compatible query)
 
     if(/^[a-zA-Z_.]+$/.test(value)) {
       // just in case to prevent arbitrary execution
-      return `
-from __future__ import print_function
+      return python_setup + `
+def _get_path(value):
+    """Returns (path, is_sym_link) tuple"""
+    from importlib.util import find_spec
 
-try:
-    def _get_path(value):
-        """Returns (path, is_sym_link) tuple"""
-        from importlib.util import find_spec
-        from pathlib import Path
+    path = find_spec(value).origin
 
-        path = Path(find_spec(value).origin)
-        cwd = Path.cwd()
+    return jupyter_lab_consumable_path(path)
 
-        # the simple case
-        if cwd in path.parents:
-            return path.relative_to(cwd), False
-
-        symlinks_dir = Path('.jupyter_symlinks')
-        symlinks_dir.mkdir(exist_ok=True)
-        # relative pathways could lead out of the starting dir as well (e.g. using .. construct on Linux)
-        path = path.absolute().resolve()
-
-        # remove anchor (root slash/drive etc)
-        sub_path = path.relative_to(path.anchor)
-
-        # TODO: add drive to avoid confusion on Windows
-        symlink = symlinks_dir / sub_path
-        symlink.parent.mkdir(exist_ok=True, parents=True)
-        try:
-            symlink.unlink()
-        except FileNotFoundError:
-            pass
-        assert not symlink.is_absolute()
-        symlink.symlink_to(path)
-        return symlink, True
-
-    print(_get_path('` + value + `')[0], end='')
-
-except Exception:
-    # Python 2.7, untested
-    import imp
-    # TODO: this is not the best idea. JSON might be better
-    print(imp.find_module('` + value + `')[1], end='')
+print(json.dumps(_get_path('` + value + `')), end='')
 `
     }
   }

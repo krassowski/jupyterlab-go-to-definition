@@ -1,5 +1,4 @@
 import { CodeEditor } from "@jupyterlab/codeeditor";
-import { Kernel, KernelMessage } from "@jupyterlab/services";
 import { ITokensProvider } from "../editors/editor";
 
 
@@ -85,16 +84,8 @@ export abstract class LanguageAnalyzer {
     return '';
   }
 
-  requestReferencePathFromKernel(code: string, kernel: Kernel.IKernelConnection, callback: (msg: KernelMessage.IIOPubMessage) => any) {
-
-    let request = {code: code, stop_on_error: false, silent: true};
-    kernel.ready.then(() => {
-      let future = kernel.requestExecute(request);
-
-      future.onIOPub = callback;
-
-      return future.done;
-    })
+  definitionLocationQuery(context: TokenContext) {
+    return ''
   }
 
   _maybe_setup_tokens() {
@@ -211,7 +202,6 @@ export abstract class LanguageAnalyzer {
   }
 
   abstract _selectTerminatingTokens(tokens: Array<CodeEditor.IToken>): Array<CodeEditor.IToken>
-
 }
 
 

@@ -11,7 +11,6 @@ export class FileEditorJumper extends CodeJumper {
 
   editor: FileEditor;
   language: string;
-  history: JumpHistory;
   widget: IDocumentWidget;
 
   constructor(editor_widget: IDocumentWidget<FileEditor>, history: JumpHistory, document_manager: IDocumentManager) {

@@ -9,6 +9,9 @@ import { LanguageAnalyzer, TokenContext } from "../languages/analyzer";
 import { Kernel, KernelMessage } from "@jupyterlab/services";
 import IIOPubMessage = KernelMessage.IIOPubMessage;
 import { IDocumentWidget } from "@jupyterlab/docregistry";
+import { FileEditorJumper } from "./fileeditor";
+import { JumpHistory } from "../history";
+import { FileEditor } from "@jupyterlab/fileeditor";
 
 
 function hasCellMagic(tokens: CodeEditor.IToken[]) {
@@ -51,6 +54,8 @@ export abstract class CodeJumper {
 
   document_manager: IDocumentManager;
   widget: IDocumentWidget;
+
+  history: JumpHistory;
 
   abstract jump_to_definition(jump: IJump): void
 
@@ -147,11 +152,21 @@ export abstract class CodeJumper {
     };
   }
 
-  try_to_open_document(path: string) {
+  try_to_open_document(path: string, line_number=0) {
     // TODO handle promises?
     this.document_manager.services.contents.get(path, {content: false})
       .then(() => {
-        this.document_manager.openOrReveal(path);
+        let document_widget = this.document_manager.openOrReveal(path);
+        let document_jumper = new FileEditorJumper(
+          document_widget as IDocumentWidget<FileEditor>,
+          this.history, this.document_manager
+        );
+        document_jumper.jump({
+          token: {
+            offset: document_jumper.editor.editor.getOffsetAt({line: line_number, column: 0}),
+            value: '',
+          },
+        })
       })
       .catch(() => {
       });
@@ -160,7 +175,9 @@ export abstract class CodeJumper {
   handle_path_from_kernel(response: IIOPubMessage, fallback_paths: string[]) {
     let obj: any = response.content;
     if (obj.name === 'stdout') {
-      this.try_to_open_document(obj.text);
+      let data = JSON.parse(obj.text);
+      this.try_to_open_document(data['path']);
+      console.log('Outside of project directory?', data['is_symlink']);
     } else if (response.header.msg_type === 'error') {
       console.error('Failed to resolve the paths from kernel; falling back to guessing the path locations');
       console.log(response);
@@ -176,6 +193,19 @@ export abstract class CodeJumper {
 
   abstract get cwd(): string;
 
+  queryKernel(code: string, kernel: Kernel.IKernelConnection, callback: (msg: KernelMessage.IIOPubMessage) => any) {
+
+    let request = {code: code, stop_on_error: false, silent: true};
+    kernel.ready.then(() => {
+      let future = kernel.requestExecute(request);
+
+      future.onIOPub = callback;
+
+      return future.done;
+    })
+  }
+
+
   protected jump_to_cross_file_reference(context: TokenContext, cell_of_origin_analyzer: LanguageAnalyzer) {
 
     let potential_paths = cell_of_origin_analyzer.guessReferencePath(context);
@@ -187,16 +217,49 @@ export abstract class CodeJumper {
     let code = cell_of_origin_analyzer.referencePathQuery(context);
 
     if (cell_of_origin_analyzer.supportsKernel && this.kernel && code) {
-      cell_of_origin_analyzer.requestReferencePathFromKernel(
+      this.queryKernel(
         code, this.kernel,
-        msg => this.handle_path_from_kernel(msg, potential_paths)
+        msg => this.handle_path_from_kernel(msg, potential_paths) // TODO: extract fallback?
       );
     } else {
+       // TODO: extract fallback?
       // if kernel is not available, try use the guessed paths
       // try one by one
       for (let path of potential_paths) {
         this.try_to_open_document(path);
       }
+    }
+
+  }
+
+  handle_kernel_inspect(response: IIOPubMessage, fallback: Function) {
+    let obj: any = response.content;
+    if (obj.name === 'stdout') {
+      let data = JSON.parse(obj.text);
+      let line_number = data['line_number'];
+      this.try_to_open_document(data['path'], line_number - 1);
+
+      console.log('Outside of project directory?', data['is_symlink']);
+      console.log('Line number?', line_number);
+    } else if (response.header.msg_type === 'error') {
+      console.error('Failed to resolve the paths from kernel; falling back to guessing the path locations');
+      console.log(response);
+      fallback()
+    }
+  }
+
+
+  protected inspect_and_jump(context: TokenContext, cell_of_origin_analyzer: LanguageAnalyzer, fallback: Function) {
+
+    let code = cell_of_origin_analyzer.definitionLocationQuery(context);
+
+    if (cell_of_origin_analyzer.supportsKernel && this.kernel && code) {
+      this.queryKernel(
+        code, this.kernel,
+        msg => this.handle_kernel_inspect(msg, fallback)
+      );
+    } else {
+      fallback()
     }
 
   }

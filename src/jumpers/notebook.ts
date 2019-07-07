@@ -13,7 +13,6 @@ import { Kernel } from "@jupyterlab/services";
 export class NotebookJumper extends CodeJumper {
 
   notebook: Notebook;
-  history: JumpHistory;
   widget: NotebookPanel;
 
   constructor(notebook_widget: NotebookPanel, history: JumpHistory, document_manager: IDocumentManager) {
@@ -93,20 +92,28 @@ export class NotebookJumper extends CodeJumper {
       cell_of_origin_analyzer._get_token_index(jump.token)
     );
 
-    if(cell_of_origin_analyzer.isCrossFileReference(context))
-    {
-      this.jump_to_cross_file_reference(context, cell_of_origin_analyzer)
+    if(cell_of_origin_analyzer.isCrossFileReference(context)) {
+      this.jump_to_cross_file_reference(context, cell_of_origin_analyzer);
     } else {
-      // else, jump to the last definition in the current notebook:
-      let {token, cellIndex} = this._findLastDefinition(jump.token, index);
+      // try to get the location of definition from the kernel (for Python - using inspect)
 
-      // nothing found
-      if (!token) {
-        return;
-      }
+      // if has location:
+      // open tab with the file
+      this.inspect_and_jump(context, cell_of_origin_analyzer, () => {
 
-      this.history.store(this.notebook, {token: jump.token, index: index});
-      this.jump({token: token, index: cellIndex})
+        // if it fails, jump to the last definition in the current notebook:
+        let {token, cellIndex} = this._findLastDefinition(jump.token, index);
+
+        // nothing found
+        if (!token) {
+          return;
+        }
+
+        this.history.store(this.notebook, {token: jump.token, index: index});
+        this.jump({token: token, index: cellIndex})
+
+      });
+
     }
   }
 
