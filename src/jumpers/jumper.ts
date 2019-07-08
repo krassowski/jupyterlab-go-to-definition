@@ -10,6 +10,9 @@ import { Kernel, KernelMessage } from "@jupyterlab/services";
 import IIOPubMessage = KernelMessage.IIOPubMessage;
 import { IDocumentWidget } from "@jupyterlab/docregistry";
 import { JumpHistory } from "../history";
+import { FileEditor } from "@jupyterlab/fileeditor";
+import IEditor = CodeEditor.IEditor;
+import { Dialog, showDialog } from "@jupyterlab/apputils";
 
 
 function hasCellMagic(tokens: CodeEditor.IToken[]) {
@@ -153,19 +156,14 @@ export abstract class CodeJumper {
   private go_to_position(document_widget: IDocumentWidget, jumper: string, column: number, line_number: number, input_number = 0) {
 
     let document_jumper: CodeJumper;
-
     let position = {line: line_number, column: column};
-
     let document_jumper_type = jumpers.get(jumper);
 
-    document_jumper = new document_jumper_type(
-      document_widget, this.history, this.document_manager
-    );
-
+    document_jumper = new document_jumper_type(document_widget, this.history, this.document_manager);
     document_jumper.jump(document_jumper.getJumpPosition(position, input_number));
   }
 
-  try_to_open_document(path: string, line_number = 0, input_number: number = null, column: number = 0) {
+  try_to_open_document(path: string, is_symlink: boolean, line_number = 0, input_number: number = null, column: number = 0) {
 
     if (input_number && !path && this.constructor.name === 'NotebookJumper') {
       // the definition is in this notebook
@@ -178,7 +176,36 @@ export abstract class CodeJumper {
           let document_widget = this.document_manager.openOrReveal(path);
 
           document_widget.revealed.then(() => {
-            this.go_to_position(document_widget, 'fileeditor', column, line_number, input_number)
+            this.go_to_position(document_widget, 'fileeditor', column, line_number, input_number);
+
+            // protect external files from accidental edition
+            if (is_symlink) {
+              let editor_widget = (document_widget as IDocumentWidget<FileEditor>);
+              editor_widget.title.label = editor_widget.title.label + ' (external)';
+              let editor = editor_widget.content.editor;
+              let disposable = editor.addKeydownHandler((editor: IEditor, event: KeyboardEvent) => {
+
+                let dialog_promise = showDialog({
+                  title: 'Edit external file?',
+                  body:
+                    'This file is located outside of the root of the JupyterLab start directory. '
+                    + 'do you really wish to edit it?',
+                  buttons: [
+                    Dialog.cancelButton({label: 'Cancel'}),
+                    Dialog.warnButton({label: 'Edit anyway'})
+                  ]
+                });
+
+                dialog_promise.then(result => {
+                  if (result.button.accept)
+                    disposable.dispose();
+                });
+
+                // prevent default
+                return true;
+              });
+            }
+
           });
         })
         .catch(() => {
@@ -191,13 +218,12 @@ export abstract class CodeJumper {
     let obj: any = response.content;
     if (obj.name === 'stdout') {
       let data = JSON.parse(obj.text);
-      this.try_to_open_document(data['path']);
-      console.log('Outside of project directory?', data['is_symlink']);
+      this.try_to_open_document(data['path'], data['is_symlink']);
     } else if (response.header.msg_type === 'error') {
       console.error('Failed to resolve the paths from kernel; falling back to guessing the path locations');
       console.log(response);
       for (let path of fallback_paths) {
-        this.try_to_open_document(path);
+        this.try_to_open_document(path, false);
       }
     }
   }
@@ -241,7 +267,7 @@ export abstract class CodeJumper {
       // if kernel is not available, try use the guessed paths
       // try one by one
       for (let path of potential_paths) {
-        this.try_to_open_document(path);
+        this.try_to_open_document(path, false);
       }
     }
 
@@ -253,14 +279,10 @@ export abstract class CodeJumper {
       let data = JSON.parse(obj.text);
       if (!data) {
         // not a definition that the server can resolve, carry on
-        console.error('Failed to resolve the paths from kernel; falling back to guessing the path locations');
-        console.log(response);
         fallback()
       }
       let line_number = data['line_number'];
-      this.try_to_open_document(data['path'], line_number - 1, data['input_number']);
-
-      console.log('Outside of project directory?', data['is_symlink']);
+      this.try_to_open_document(data['path'], data['is_symlink'], line_number - 1, data['input_number']);
     } else if (response.header.msg_type === 'error') {
       console.error('Failed to resolve the paths from kernel; falling back to guessing the path locations');
       console.log(response);
