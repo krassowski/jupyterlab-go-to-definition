@@ -282,7 +282,7 @@ export abstract class CodeJumper {
         fallback()
       }
       let line_number = data['line_number'];
-      this.try_to_open_document(data['path'], data['is_symlink'], line_number - 1, data['input_number']);
+      this.try_to_open_document(data['path'], data['is_symlink'], line_number - 1, data['input_number'], data['column']);
     } else if (response.header.msg_type === 'error') {
       console.error('Failed to resolve the paths from kernel; falling back to guessing the path locations');
       console.log(response);

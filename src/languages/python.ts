@@ -270,13 +270,14 @@ def _locate_definition(name):
         path = None
 
     try:
-        line_number = getsourcelines(obj)[1]
+        source, line_number = getsourcelines(obj)
     except OSError:
         line_number = 0
 
     return {
         'line_number': line_number,
         'input_number': input_number,
+        'column': len(source[0]) - len(source[0].lstrip()),
         **jupyter_lab_consumable_path(path)
     } 
 
