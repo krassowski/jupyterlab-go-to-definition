@@ -15,7 +15,15 @@ To jump back to the variable/function usage, use <kbd>Alt</kbd> + <kbd>o</kbd>.
 The plugin is language-agnostic, though optimized for Python and R.
 Support for other languages is possible (PRs welcome).
 
-Simple jumping to files is possible** - click on the name of a module in Python (e.g. `from x.y import z` - alt-click on `x` or `z`) or on `source` function in R (e.g. alt-clicking on `source` in `source('test.R')` will open `test.R` file).
+#### Jumping to definitions in other files
+
+Python:
+ - alt-click on the name of a module in Python (e.g. `from x.y import z` - alt-click on `x` or `z`) (new in v0.5)
+ - alt-click on any symbol imported from any module (except for builtin modules written in C as such do not have a corresponding Python source file) **in a notebook with active Python 3 kernel** (new in v0.6)
+
+R (new in v0.5):
+ - alt-click on `source` function (e.g. alt-clicking on `source` in `source('test.R')` will open `test.R` file)
+ - alt-click on `.from` of `import::here(x, y, .from='some_file.R')`
 
 \*) For full list of physical keys mapped to the modifiers (which depend on your Operating System), please see [the MDN documentation](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/getModifierState).
 
