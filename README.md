@@ -8,7 +8,7 @@ Use <kbd>Alt</kbd> + <kbd>click</kbd> to jump to a definition using your mouse, 
 
 ![Go to definition](https://raw.githubusercontent.com/krassowski/jupyterlab-go-to-definition/master/examples/demo.gif)
 
-You can replace the key modifier for mouse click from <kbd>Alt</kbd> to <kbd>Control</kbd>, <kbd>Shift</kbd>, <kbd>Meta</kbd> or <kbd>AltGraph</kbd> in the settings*.
+You can replace the key modifier for mouse click from <kbd>Alt</kbd> to <kbd>Control</kbd>, <kbd>Shift</kbd>, <kbd>Meta</kbd> or <kbd>AltGraph</kbd> in the settings (see remarks below).
 
 To jump back to the variable/function usage, use <kbd>Alt</kbd> + <kbd>o</kbd>.
 
@@ -25,7 +25,11 @@ R (new in v0.5):
  - alt-click on `source` function (e.g. alt-clicking on `source` in `source('test.R')` will open `test.R` file)
  - alt-click on `.from` of `import::here(x, y, .from='some_file.R')`
 
-\*) For full list of physical keys mapped to the modifiers (which depend on your Operating System), please see [the MDN documentation](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/getModifierState).
+#### Changing the modifiers key from `alt`
+
+Please go to `Settings > Advanced Setting Editor > Go-to-definition` and add a modified of your choice in the User Preferences panel.
+
+For full list of physical keys mapped to the modifiers (which depend on your Operating System), please see [the MDN documentation](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/getModifierState).
 
 Safari users: Safari does not implement `MouseEvent.getModifierState` (see [#3](https://github.com/krassowski/jupyterlab-go-to-definition/issues/3)), thus only <kbd>Alt</kbd>, <kbd>Control</kbd>, <kbd>Shift</kbd> and <kbd>Meta</kbd> are supported.
 
