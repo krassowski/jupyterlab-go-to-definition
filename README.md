@@ -19,11 +19,13 @@ Support for other languages is possible (PRs welcome).
 
 Python:
  - alt-click on the name of a module in Python (e.g. `from x.y import z` - alt-click on `x` or `z`) (new in v0.5)
- - alt-click on any symbol imported from any module (except for builtin modules written in C as such do not have a corresponding Python source file) **in a notebook with active Python 3 kernel** (new in v0.6)
+ - alt-click on a class, function or method imported from any module (except for builtin modules written in C as such do not have a corresponding Python source file) **in a notebook with active Python 3 kernel** (new in v0.6)
 
 R (new in v0.5):
  - alt-click on `source` function (e.g. alt-clicking on `source` in `source('test.R')` will open `test.R` file)
  - alt-click on `.from` of `import::here(x, y, .from='some_file.R')`
+
+Background: there are two ways to solve the definitions location: static analysis and inspection performed in the kernel. The latter is more accurate, although it currently only works in the notebooks (not in the file editor). For the implementation overview, please see [the design page](https://github.com/krassowski/jupyterlab-go-to-definition/wiki).
 
 #### Changing the modifiers key from `alt`
 
