@@ -29,9 +29,7 @@ Background: there are two ways to solve the definitions location: static analysi
 
 #### Changing the modifiers key from `alt`
 
-Please go to `Settings > Advanced Setting Editor > Go-to-definition` and add a modified of your choice in the User Preferences panel.
-
-For full list of physical keys mapped to the modifiers (which depend on your Operating System), please see [the MDN documentation](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/getModifierState).
+Please go to `Settings > Advanced Setting Editor > Go-to-definition` and set a modifier of your choice in the User Preferences panel. For full list of physical keys mapped to the modifiers (which depend on your Operating System), please see [the MDN documentation](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/getModifierState).
 
 Safari users: Safari does not implement `MouseEvent.getModifierState` (see [#3](https://github.com/krassowski/jupyterlab-go-to-definition/issues/3)), thus only <kbd>Alt</kbd>, <kbd>Control</kbd>, <kbd>Shift</kbd> and <kbd>Meta</kbd> are supported.
 
