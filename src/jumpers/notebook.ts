@@ -94,6 +94,10 @@ export class NotebookJumper extends CodeJumper {
       cell_of_origin_analyzer._get_token_index(jump.token)
     );
 
+    let after_jump = () => {
+      this.history.store(this.notebook, {token: jump.token, index: index});
+    };
+
     if(cell_of_origin_analyzer.isCrossFileReference(context)) {
       this.jump_to_cross_file_reference(context, cell_of_origin_analyzer);
     } else {
@@ -119,10 +123,9 @@ export class NotebookJumper extends CodeJumper {
           return;
         }
 
-        this.history.store(this.notebook, {token: jump.token, index: index});
         this.jump({token: token, index: cellIndex})
 
-      });
+      }, after_jump);
 
     }
   }

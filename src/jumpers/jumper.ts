@@ -160,7 +160,8 @@ export abstract class CodeJumper {
     let document_jumper_type = jumpers.get(jumper);
 
     document_jumper = new document_jumper_type(document_widget, this.history, this.document_manager);
-    document_jumper.jump(document_jumper.getJumpPosition(position, input_number));
+    let jump_position = document_jumper.getJumpPosition(position, input_number);
+    document_jumper.jump(jump_position);
   }
 
   try_to_open_document(path: string, is_symlink: boolean, line_number = 0, input_number: number = null, column: number = 0) {
@@ -291,7 +292,7 @@ export abstract class CodeJumper {
   }
 
 
-  protected inspect_and_jump(context: TokenContext, cell_of_origin_analyzer: LanguageAnalyzer, fallback: Function) {
+  protected inspect_and_jump(context: TokenContext, cell_of_origin_analyzer: LanguageAnalyzer, fallback: Function, callback: Function) {
 
     let code = cell_of_origin_analyzer.definitionLocationQuery(context);
 
@@ -304,6 +305,9 @@ export abstract class CodeJumper {
       fallback()
     }
 
+
+    // TODO: rewrite with promises, make sure that we do not call callback if the jump failed
+    callback();
   }
 
   abstract jump(position: IJumpPosition): void;
