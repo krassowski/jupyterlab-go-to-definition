@@ -77,3 +77,36 @@ npm test
 Support for new languages should be provided by implementation of abstract `LanguageAnalyzer` class (in case of languages which support use of semicolons to terminate statements `LanguageWithOptionalSemicolons` helper class can be utilized).
 
 Each new language class needs to be included in `chooseLanguageAnalyzer` function and the developer needs to verify if `setLanguageFromMime` in `fileeditor.ts` will be able to recognize the language properly.
+
+
+### Experimental: Language Server Protocol with many more IDE features
+
+Clone and switch to `lsp` branch:
+
+```bash
+git clone https://github.com/krassowski/jupyterlab-go-to-definition.git
+cd jupyterlab-go-to-definition
+git checkout lsp
+# dev-dependencies may be needed as well
+npm install .
+jupyter labextension install .
+```
+
+Install server for python (pyls):
+
+```bash
+pip install python-language-server[all]
+```
+
+create file called `servers.yml`:
+
+```yaml
+langservers:
+  python:
+    - pyls
+```
+
+Then run (TODO: could this be started by the extension?):
+```bash
+node node_modules/jsonrpc-ws-proxy/dist/server.js --port 3000 --languageServers servers.yml
+```

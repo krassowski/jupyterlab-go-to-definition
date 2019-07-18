@@ -9,6 +9,7 @@
     "outDir": "lib",
     "rootDir": "src",
     "strict": true,
+    "skipLibCheck": true,
     "strictNullChecks": false,
     "esModuleInterop": true,
     "target": "es2015",
