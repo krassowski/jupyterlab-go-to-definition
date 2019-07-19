@@ -35,7 +35,7 @@ Safari users: Safari does not implement `MouseEvent.getModifierState` (see [#3](
 
 ## Prerequisites
 
-* JupyterLab
+* JupyterLab 1.0+
 
 ## Installation
 
