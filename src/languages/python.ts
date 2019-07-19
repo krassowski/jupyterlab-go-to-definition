@@ -1,6 +1,7 @@
 import { CodeEditor } from "@jupyterlab/codeeditor";
 import { LanguageWithOptionalSemicolons, TokenContext } from "./analyzer";
 import IToken = CodeEditor.IToken;
+import { PathExt } from "@jupyterlab/coreutils";
 
 
 function evaluateSkippingBrackets(tokens: ReadonlyArray<IToken>, indexShift: number, callback: Function, allowNegativeBrackets=false){
@@ -313,7 +314,7 @@ print(json.dumps(_get_path('` + value + `')), end='')
   guessReferencePath(context: TokenContext) {
     let parts = this._imports_breadcrumbs(context);
     let prefix = parts.join('/');
-    return [prefix + '.py', prefix + '/__init__.py']
+    return [prefix + '.py', PathExt.join(prefix, '__init__.py')]
   }
 
   // Matching `as`:

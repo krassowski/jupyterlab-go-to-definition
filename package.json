@@ -45,7 +45,7 @@
     "@phosphor/algorithm": "^1.1.2",
     "codemirror": "^5.47.0",
     "jsonrpc-ws-proxy": "0.0.5",
-    "lsp-editor-adapter": "0.0.9",
+    "lsp-editor-adapter": "0.0.10",
     "react": "^16.8.4"
   },
   "devDependencies": {

@@ -6,14 +6,7 @@ import { TokenContext } from "../languages/analyzer";
 import { IDocumentManager } from "@jupyterlab/docmanager";
 import { IDocumentWidget } from "@jupyterlab/docregistry";
 import { CodeEditor } from "@jupyterlab/codeeditor";
-
-import 'codemirror/addon/hint/show-hint.css';
-import 'codemirror/addon/hint/show-hint';
-
-import 'lsp-editor-adapter/lib/codemirror-lsp.css';
-import { LspWsConnection, CodeMirrorAdapter } from 'lsp-editor-adapter';
-import { CodeMirrorEditor } from "@jupyterlab/codemirror";
-
+import { PathExt } from '@jupyterlab/coreutils';
 
 
 export class FileEditorJumper extends CodeJumper {
@@ -33,28 +26,6 @@ export class FileEditorJumper extends CodeJumper {
     this.editor.model.mimeTypeChanged.connect((session, mimeChanged) => {
       this.setLanguageFromMime(mimeChanged.newValue)
     });
-
-    this.setup_lsp()
-  }
-
-  private setup_lsp() {
-    console.log(this.path);
-    let cm_editor = this.editor.editor as CodeMirrorEditor;
-    let value = this.language;
-    let connection = new LspWsConnection({
-      serverUri: 'ws://localhost/' + value,
-      languageId: value,
-      rootUri: 'file:///' + this.cwd,
-      documentUri: 'file:///' + this.path,
-      documentText: () => cm_editor.editor.getValue(),
-    }).connect(new WebSocket('ws://localhost:3000/' + value));
-
-    // @ts-ignore
-    new CodeMirrorAdapter(connection, {
-      quickSuggestionsDelay: 10,
-    }, cm_editor.editor);
-
-    console.log('Connected adapter');
   }
 
   get path() {
@@ -62,7 +33,8 @@ export class FileEditorJumper extends CodeJumper {
   }
 
   get cwd() {
-    return this.path.split('/').slice(0, -1).join('/')
+    return PathExt.dirname(this.path);
+    //return this.path.split('/').slice(0, -1).join('/')
   }
 
   setLanguageFromMime(mime: string){

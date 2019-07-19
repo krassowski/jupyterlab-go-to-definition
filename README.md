@@ -110,3 +110,14 @@ Then run (TODO: could this be started by the extension?):
 ```bash
 node node_modules/jsonrpc-ws-proxy/dist/server.js --port 3000 --languageServers servers.yml
 ```
+
+To enable opening files outside of the root directory (the place where you start JupyterLab),
+create `.lsp_symlink` and symlink your `home`, `usr` (or other location which include the files that you wish to make possible to open) in there:
+```bash
+mkdir .lsp_symlink
+cd .lsp_symlink
+ln -s /home home
+ln -s /usr usr
+```
+
+If your user does not have sufficient permissions to traverse the entire path, you will not be able to open the file.
