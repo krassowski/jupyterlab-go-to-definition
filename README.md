@@ -92,10 +92,14 @@ npm install .
 jupyter labextension install .
 ```
 
-Install server for python (pyls):
+Install servers for languages of your choice. Below are examples for Python (with [pyls](https://github.com/palantir/python-language-server)) and R (with [languageserver](https://github.com/REditorSupport/languageserver)):
 
 ```bash
 pip install python-language-server[all]
+```
+
+```bash
+R -e 'install.packages("languageserver")'
 ```
 
 create file called `servers.yml`:
@@ -104,7 +108,14 @@ create file called `servers.yml`:
 langservers:
   python:
     - pyls
+  R:
+    - R
+    - --slave
+    - -e
+    - languageserver::run()
 ```
+
+For the full list of langauge servers see the [Microsoft's list](https://microsoft.github.io/language-server-protocol/implementors/servers/); it may also be good to visit the repository of each server as many provide some additional configuration options.
 
 Then run (TODO: could this be started by the extension?):
 ```bash
@@ -112,7 +123,7 @@ node node_modules/jsonrpc-ws-proxy/dist/server.js --port 3000 --languageServers 
 ```
 
 To enable opening files outside of the root directory (the place where you start JupyterLab),
-create `.lsp_symlink` and symlink your `home`, `usr` (or other location which include the files that you wish to make possible to open) in there:
+create `.lsp_symlink` and symlink your `home`, `usr`, or any other location which include the files that you wish to make possible to open in there:
 ```bash
 mkdir .lsp_symlink
 cd .lsp_symlink
