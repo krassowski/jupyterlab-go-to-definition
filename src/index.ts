@@ -101,6 +101,7 @@ class FileEditorAdapter {
         uri = uri.slice(7);
 
       jumper.global_jump({
+        // TODO: there are many files which are not symlinks
         uri: '.lsp_symlink/' + uri,
         editor_index: 0,
         line: line,
