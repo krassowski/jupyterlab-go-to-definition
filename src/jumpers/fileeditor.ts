@@ -6,6 +6,7 @@ import { TokenContext } from "../languages/analyzer";
 import { IDocumentManager } from "@jupyterlab/docmanager";
 import { IDocumentWidget } from "@jupyterlab/docregistry";
 import { CodeEditor } from "@jupyterlab/codeeditor";
+import { PathExt } from '@jupyterlab/coreutils';
 
 
 export class FileEditorJumper extends CodeJumper {
@@ -27,8 +28,12 @@ export class FileEditorJumper extends CodeJumper {
     });
   }
 
+  get path() {
+    return this.widget.context.path
+  }
+
   get cwd() {
-    return this.widget.context.path.split('/').slice(0, -1).join('/')
+    return PathExt.dirname(this.path);
   }
 
   setLanguageFromMime(mime: string){

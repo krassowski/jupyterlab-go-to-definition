@@ -1,7 +1,7 @@
 import { CodeMirrorEditor } from "@jupyterlab/codemirror";
 import { CodeEditor } from "@jupyterlab/codeeditor";
 
-import { IJump, IJumpPosition } from "../jump";
+import { IGlobalJump, IJump, IJumpPosition } from "../jump";
 import { chooseLanguageAnalyzer } from "../languages/chooser";
 import { CodeMirrorExtension } from "../editors/codemirror";
 import { IDocumentManager } from "@jupyterlab/docmanager";
@@ -47,6 +47,16 @@ const cell_magic_lang_to_tokenizer : any = {
   // 'script': '',
   // 'sh': '',
 };
+
+
+const movement_keys = [
+  'ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown',
+  'Home', 'End', 'PageUp', 'PageDown'
+];
+
+const modifiers = [
+  'Alt', 'AltGraph', 'Control', 'Shift'
+];
 
 
 export abstract class CodeJumper {
@@ -164,6 +174,49 @@ export abstract class CodeJumper {
     document_jumper.jump(jump_position);
   }
 
+  public global_jump(position: IGlobalJump, is_symlink=false) {
+
+    let document_widget = this.document_manager.openOrReveal(position.uri);
+
+    document_widget.revealed.then(() => {
+      this.go_to_position(document_widget, 'fileeditor', position.column, position.line, position.editor_index);
+
+      // protect external files from accidental edition
+      if (is_symlink) {
+        let editor_widget = (document_widget as IDocumentWidget<FileEditor>);
+        editor_widget.title.label = editor_widget.title.label + ' (external)';
+        let editor = editor_widget.content.editor;
+        let disposable = editor.addKeydownHandler((editor: IEditor, event: KeyboardEvent) => {
+
+          // allow to move around, select text and use alt freely
+          if(movement_keys.indexOf(event.key) !== -1 || modifiers.indexOf(event.key) !== -1) {
+            return false;
+          }
+
+          let dialog_promise = showDialog({
+            title: 'Edit external file?',
+            body:
+              'This file is located outside of the root of the JupyterLab start directory. '
+              + 'do you really wish to edit it?',
+            buttons: [
+              Dialog.cancelButton({label: 'Cancel'}),
+              Dialog.warnButton({label: 'Edit anyway'})
+            ]
+          });
+
+          dialog_promise.then(result => {
+            if (result.button.accept)
+              disposable.dispose();
+          });
+
+          // prevent default
+          return true;
+        });
+      }
+
+    });
+  }
+  
   try_to_open_document(path: string, is_symlink: boolean, line_number = 0, input_number: number = null, column: number = 0) {
 
     if (input_number && !path && this.constructor.name === 'NotebookJumper') {
@@ -174,40 +227,12 @@ export abstract class CodeJumper {
     } else {
       this.document_manager.services.contents.get(path, {content: false})
         .then(() => {
-          let document_widget = this.document_manager.openOrReveal(path);
-
-          document_widget.revealed.then(() => {
-            this.go_to_position(document_widget, 'fileeditor', column, line_number, input_number);
-
-            // protect external files from accidental edition
-            if (is_symlink) {
-              let editor_widget = (document_widget as IDocumentWidget<FileEditor>);
-              editor_widget.title.label = editor_widget.title.label + ' (external)';
-              let editor = editor_widget.content.editor;
-              let disposable = editor.addKeydownHandler((editor: IEditor, event: KeyboardEvent) => {
-
-                let dialog_promise = showDialog({
-                  title: 'Edit external file?',
-                  body:
-                    'This file is located outside of the root of the JupyterLab start directory. '
-                    + 'do you really wish to edit it?',
-                  buttons: [
-                    Dialog.cancelButton({label: 'Cancel'}),
-                    Dialog.warnButton({label: 'Edit anyway'})
-                  ]
-                });
-
-                dialog_promise.then(result => {
-                  if (result.button.accept)
-                    disposable.dispose();
-                });
-
-                // prevent default
-                return true;
-              });
-            }
-
-          });
+           this.global_jump({
+             editor_index: input_number,
+             line: line_number,
+             column: column,
+             uri: path
+           }, is_symlink)
         })
         .catch(() => {
         });

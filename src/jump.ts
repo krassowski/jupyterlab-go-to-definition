@@ -29,3 +29,16 @@ export interface IJumpPosition {
    */
   index?: number;
 }
+
+
+export interface IGlobalJump {
+  /**
+   * In notebooks, the index of the target editor
+   */
+  editor_index: number;
+
+  line: number;
+  column: number;
+
+  uri: string;
+}
