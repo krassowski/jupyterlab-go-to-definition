@@ -1,33 +1,43 @@
-import { FileEditor } from "@jupyterlab/fileeditor";
-import { Notebook } from "@jupyterlab/notebook";
 import { IJumpPosition } from "./jump";
+import { IModelDB, IObservableUndoableList } from "@jupyterlab/observables"
+import { JSONValue } from "@phosphor/coreutils";
+
+
+const DB_ENTRY = 'jumpy_history';
 
 export class JumpHistory {
 
-  jump_history: Map<string, Array<IJumpPosition>>;
+  jump_history: IObservableUndoableList<JSONValue>;
+  model_db: IModelDB;
 
-  constructor() {
-    this.jump_history = new Map<string, Array<IJumpPosition>>();
+  constructor(model_db: IModelDB) {
+    this.model_db = model_db;
   }
 
-  store(entity: FileEditor | Notebook, position: IJumpPosition) {
-    let memories: Array<IJumpPosition>;
-    if (!this.jump_history.has(entity.id)) {
-      memories = new Array<IJumpPosition>();
-      this.jump_history.set(entity.id, memories)
+  ensure_history_is_ready() {
+    if(this.jump_history === undefined) {
+      if (this.model_db.has(DB_ENTRY))
+        this.jump_history = this.model_db.get(DB_ENTRY) as IObservableUndoableList<JSONValue>;
+      else {
+        this.jump_history = this.model_db.createList(DB_ENTRY);
+      }
     }
-    else {
-      memories = this.jump_history.get(entity.id);
-    }
-    memories.push(position);
   }
 
-  recollect(entity: FileEditor | Notebook): IJumpPosition {
-    if (!this.jump_history.has(entity.id)) {
-      return null;
-    }
-    let memories = this.jump_history.get(entity.id);
-    return memories.pop()
+  store(position: IJumpPosition) {
+    this.ensure_history_is_ready();
+    this.jump_history.push(JSON.stringify(position));
+  }
+
+  recollect(): IJumpPosition {
+    this.ensure_history_is_ready();
+    if(this.jump_history.length == 0)
+      return;
+    let last_position = this.jump_history.get(this.jump_history.length - 1);
+    // being lazy here - undo addition instead of removal ;)
+    this.jump_history.undo();
+
+    return JSON.parse(last_position as string) as IJumpPosition;
   }
 }
 

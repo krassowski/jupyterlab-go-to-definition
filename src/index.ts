@@ -11,7 +11,6 @@ import { NotebookJumper } from "./jumpers/notebook";
 
 import { CodeMirrorExtension } from "./editors/codemirror";
 import { KeyModifier } from "./editors/editor";
-import { JumpHistory } from "./history";
 
 
 /**
@@ -29,8 +28,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
     documentManager: IDocumentManager
   ) => {
 
-    let jump_history = new JumpHistory();
-
     CodeMirrorExtension.configure();
 
     fileEditorTracker.widgetAdded.connect((sender, widget) => {
@@ -39,7 +36,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
       if (fileEditor.editor instanceof CodeMirrorEditor) {
 
-        let jumper = new FileEditorJumper(widget, jump_history, documentManager);
+        let jumper = new FileEditorJumper(widget, documentManager);
         let extension = new CodeMirrorExtension(fileEditor.editor, jumper);
 
         extension.connect();
@@ -49,7 +46,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     notebookTracker.widgetAdded.connect((sender, widget) => {
 
       // btw: notebookTracker.currentWidget.content === notebook
-      let jumper = new NotebookJumper(widget, jump_history, documentManager);
+      let jumper = new NotebookJumper(widget, documentManager);
       let notebook = widget.content;
 
       // timeout ain't elegant but the widgets are not populated at the start-up time
@@ -133,7 +130,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         let notebook_widget = notebookTracker.currentWidget;
         let notebook = notebook_widget.content;
 
-        let jumper = new NotebookJumper(notebook_widget, jump_history, documentManager);
+        let jumper = new NotebookJumper(notebook_widget, documentManager);
         let cell = notebook_widget.content.activeCell;
         let editor = cell.editor;
 
@@ -150,7 +147,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       execute: () => {
         let notebook_widget = notebookTracker.currentWidget;
 
-        let jumper = new NotebookJumper(notebook_widget, jump_history, documentManager);
+        let jumper = new NotebookJumper(notebook_widget, documentManager);
         jumper.jump_back();
       },
       isEnabled: isEnabled(notebookTracker)
@@ -162,7 +159,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         let fileEditorWidget = fileEditorTracker.currentWidget;
         let fileEditor = fileEditorWidget.content;
 
-        let jumper = new FileEditorJumper(fileEditorWidget, jump_history, documentManager);
+        let jumper = new FileEditorJumper(fileEditorWidget, documentManager);
         let editor = fileEditor.editor;
 
         let position = editor.getCursorPosition();
@@ -178,7 +175,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       execute: () => {
         let fileEditorWidget = fileEditorTracker.currentWidget;
 
-        let jumper = new FileEditorJumper(fileEditorWidget, jump_history, documentManager);
+        let jumper = new FileEditorJumper(fileEditorWidget, documentManager);
         jumper.jump_back()
       },
       isEnabled: isEnabled(fileEditorTracker)

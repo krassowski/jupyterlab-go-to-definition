@@ -15,12 +15,12 @@ export class FileEditorJumper extends CodeJumper {
   language: string;
   widget: IDocumentWidget;
 
-  constructor(editor_widget: IDocumentWidget<FileEditor>, history: JumpHistory, document_manager: IDocumentManager) {
+  constructor(editor_widget: IDocumentWidget<FileEditor>, document_manager: IDocumentManager) {
     super();
     this.widget = editor_widget;
     this.document_manager = document_manager;
     this.editor = editor_widget.content;
-    this.history = history;
+    this.history = new JumpHistory(this.editor.model.modelDB);
     this.setLanguageFromMime(this.editor.model.mimeType);
 
     this.editor.model.mimeTypeChanged.connect((session, mimeChanged) => {
@@ -87,7 +87,7 @@ export class FileEditorJumper extends CodeJumper {
         return;
       }
 
-      this.history.store(this.editor, {token: jump.token});
+      this.history.store({token: jump.token});
 
       this.jump({token: token})
     }
@@ -95,7 +95,7 @@ export class FileEditorJumper extends CodeJumper {
   }
 
   jump_back() {
-    let previous_position = this.history.recollect(this.editor);
+    let previous_position = this.history.recollect();
     if (previous_position)
       this.jump(previous_position)
   }

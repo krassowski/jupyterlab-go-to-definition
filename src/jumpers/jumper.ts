@@ -175,7 +175,7 @@ export abstract class CodeJumper {
     let position = {line: line_number, column: column};
     let document_jumper_type = jumpers.get(jumper);
 
-    document_jumper = new document_jumper_type(document_widget, this.history, this.document_manager);
+    document_jumper = new document_jumper_type(document_widget, this.document_manager);
     let jump_position = document_jumper.getJumpPosition(position, input_number);
     document_jumper.jump(jump_position);
   }

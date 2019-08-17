@@ -17,11 +17,11 @@ export class NotebookJumper extends CodeJumper {
   notebook: Notebook;
   widget: NotebookPanel;
 
-  constructor(notebook_widget: NotebookPanel, history: JumpHistory, document_manager: IDocumentManager) {
+  constructor(notebook_widget: NotebookPanel, document_manager: IDocumentManager) {
     super();
     this.widget = notebook_widget;
     this.notebook = notebook_widget.content;
-    this.history = history;
+    this.history = new JumpHistory(this.notebook.model.modelDB);
     this.document_manager = document_manager;
   }
 
@@ -95,7 +95,7 @@ export class NotebookJumper extends CodeJumper {
     );
 
     let after_jump = () => {
-      this.history.store(this.notebook, {token: jump.token, index: index});
+      this.history.store({token: jump.token, index: index});
     };
 
     if(cell_of_origin_analyzer.isCrossFileReference(context)) {
@@ -131,7 +131,7 @@ export class NotebookJumper extends CodeJumper {
   }
 
   jump_back() {
-    let previous_position = this.history.recollect(this.notebook);
+    let previous_position = this.history.recollect();
     if (previous_position)
       this.jump(previous_position)
   }

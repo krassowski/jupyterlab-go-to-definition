@@ -1,6 +1,6 @@
 {
   "name": "@krassowski/jupyterlab_go_to_definition",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Jump to definition of a variable or function in JupyterLab",
   "keywords": [
     "jupyter",
@@ -41,6 +41,7 @@
     "@jupyterlab/docregistry": "^1.0.0",
     "@jupyterlab/fileeditor": "^1.0.0",
     "@jupyterlab/notebook": "^1.0.0",
+    "@jupyterlab/observables": "^2.2.0",
     "@jupyterlab/services": "^4.0.0",
     "@phosphor/algorithm": "^1.1.2",
     "codemirror": "^5.47.0",
