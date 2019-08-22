@@ -33,6 +33,10 @@ Please go to `Settings > Advanced Setting Editor > Go-to-definition` and set a m
 
 Safari users: Safari does not implement `MouseEvent.getModifierState` (see [#3](https://github.com/krassowski/jupyterlab-go-to-definition/issues/3)), thus only <kbd>Alt</kbd>, <kbd>Control</kbd>, <kbd>Shift</kbd> and <kbd>Meta</kbd> are supported.
 
+#### Related extensions
+
+[jupyterlab-lsp](https://github.com/krassowski/jupyterlab-lsp) provides advanced autocompletion, code navigation, hover suggestions, linters, etc. It depends on this extension for the jumping functionality, thus all the jumps are recorded in a shared history and the "go back" option should work with jumps performed with both: shortcuts from this extension and context-menu actions of jupyterlab-lsp.
+
 ## Prerequisites
 
 * JupyterLab 1.0+
