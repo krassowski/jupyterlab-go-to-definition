@@ -97,6 +97,7 @@ JupyterLab attempts to protect users from accessing system files by restricting 
   ln -s /usr usr
   ```
 
+### Which directories to symlink?
 To find out which paths you need to symlink for Python you could run `python3 -v` which will list where are the specific built-in modules imported from. Look out for lines like these:
 
 ```python
