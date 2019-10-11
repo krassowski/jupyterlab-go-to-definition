@@ -86,7 +86,7 @@ Each new language class needs to be included in `chooseLanguageAnalyzer` functio
 
 ## Symlink workaround (jump to any file outside of the project root)
 
-JupyterLab attempts to protect users from accessing system files by restricting the accessible files to those withing the directory it was started in. If you wish to jump to any file, you cold use a symlink workaround as follows:
+JupyterLab attempts to protect users from accessing system files by restricting the accessible files to those within the directory it was started in (so called project root). If you wish to jump to files outside of the project root, you cold use a symlink workaround as follows:
   1. create `.jupyter_symlinks` in the top directory of your JupyterLab project, and
   2. symlink your `home`, `usr`, or any other location which includes the files that you wish to make possible to open in there. The Linux following commands demonstrate the idea:
 
