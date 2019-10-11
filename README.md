@@ -25,7 +25,7 @@ R (new in v0.5):
  - alt-click on `source` function (e.g. alt-clicking on `source` in `source('test.R')` will open `test.R` file)
  - alt-click on `.from` of `import::here(x, y, .from='some_file.R')`
 
-Background: there are two ways to solve the definitions location: static analysis and inspection performed in the kernel. The latter is more accurate, although it currently only works in notebooks (not in the file editor). For the implementation overview, please see [the design page](https://github.com/krassowski/jupyterlab-go-to-definition/wiki).
+Background: there are two ways to solve the definitions location: static analysis and inspection performed in the kernel. The latter is more accurate, although it currently only works in notebooks (not in the file editor). For the implementation overview, please see [the design page](https://github.com/krassowski/jupyterlab-go-to-definition/wiki). In order to jump to a file outside of the JupyterLab project directory (e.g. the built-in Python libraries) a [symlink-based workaround is required](#symlink-to-jump-to-any-file).
 
 #### Changing the modifiers key from `alt`
 
@@ -81,3 +81,37 @@ npm test
 Support for new languages should be provided by implementation of abstract `LanguageAnalyzer` class (in case of languages which support use of semicolons to terminate statements `LanguageWithOptionalSemicolons` helper class can be utilized).
 
 Each new language class needs to be included in `chooseLanguageAnalyzer` function and the developer needs to verify if `setLanguageFromMime` in `fileeditor.ts` will be able to recognize the language properly.
+
+
+
+## Symlink workaround (jump to any file outside of the project root)
+
+JupyterLab attempts to protect users from accessing system files by restricting the accesible files to those withing the directory it was started in. If you wish to jump to any file, you cold use a symlink workaround as follows:
+  1. create `.jupyter_symlinks` in the top directory of your JupyterLab project, and
+  2. symlink your `home`, `usr`, or any other location which includes the files that you wish to make possible to open in there. The Linux following commands demonstrate the idea:
+
+  ```bash
+  mkdir .jupyter_symlinks
+  cd .jupyter_symlinks
+  ln -s /home home
+  ln -s /usr usr
+  ```
+
+To find out which paths you need to symlink for Python you could run `python3 -v` which will list where are the specific built-in modules imported from. Look out for lines like these:
+
+```python
+# /srv/conda/envs/notebook/lib/python3.7/__pycache__/_collections_abc.cpython-37.pyc matches /srv/conda/envs/notebook/lib/python3.7/_collections_abc.py
+# code object from '/srv/conda/envs/notebook/lib/python3.7/__pycache__/_collections_abc.cpython-37.pyc'
+import '_collections_abc' # <_frozen_importlib_external.SourceFileLoader object at 0x7f77ba22c400>
+```
+
+which mean that you want `/srv/conda/envs/notebook/lib/python3.7/` to be symlinked to access `_collections_abc`. You can do this by:
+
+```bash
+# still in .jupyter_symlinks
+mkdir -p srv/conda/envs/notebook/lib
+# note: no slash (/) at the begining of the second path
+ln -s /srv/conda/envs/notebook/lib/python3.7 srv/conda/envs/notebook/lib/python3.7
+```
+
+Please note that not every Python built-in module has a corresponding Python file, as many are written in C for performance reasons.
