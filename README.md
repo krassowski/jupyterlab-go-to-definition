@@ -25,7 +25,7 @@ R (new in v0.5):
  - alt-click on `source` function (e.g. alt-clicking on `source` in `source('test.R')` will open `test.R` file)
  - alt-click on `.from` of `import::here(x, y, .from='some_file.R')`
 
-Background: there are two ways to solve the definitions location: static analysis and inspection performed in the kernel. The latter is more accurate, although it currently only works in notebooks (not in the file editor). For the implementation overview, please see [the design page](https://github.com/krassowski/jupyterlab-go-to-definition/wiki). In order to jump to a file outside of the JupyterLab project directory (e.g. the built-in Python libraries) a [symlink-based workaround is required](#symlink-to-jump-to-any-file).
+Background: there are two ways to solve the definitions location: static analysis and inspection performed in the kernel. The latter is more accurate, although it currently only works in notebooks (not in the file editor). For the implementation overview, please see [the design page](https://github.com/krassowski/jupyterlab-go-to-definition/wiki). In order to jump to a file outside of the JupyterLab project directory (e.g. the built-in Python libraries) a [symlink-based workaround is required](https://github.com/krassowski/jupyterlab-go-to-definition#symlink-workaround-jump-to-any-file-outside-of-the-project-root).
 
 #### Changing the modifiers key from `alt`
 
@@ -86,7 +86,7 @@ Each new language class needs to be included in `chooseLanguageAnalyzer` functio
 
 ## Symlink workaround (jump to any file outside of the project root)
 
-JupyterLab attempts to protect users from accessing system files by restricting the accesible files to those withing the directory it was started in. If you wish to jump to any file, you cold use a symlink workaround as follows:
+JupyterLab attempts to protect users from accessing system files by restricting the accessible files to those withing the directory it was started in. If you wish to jump to any file, you cold use a symlink workaround as follows:
   1. create `.jupyter_symlinks` in the top directory of your JupyterLab project, and
   2. symlink your `home`, `usr`, or any other location which includes the files that you wish to make possible to open in there. The Linux following commands demonstrate the idea:
 
