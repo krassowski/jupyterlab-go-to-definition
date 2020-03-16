@@ -44,7 +44,8 @@ Safari users: Safari does not implement `MouseEvent.getModifierState` (see [#3](
 ## Installation
 
 ```bash
-jupyter labextension install @krassowski/jupyterlab_go_to_definition
+jupyter labextension install @krassowski/jupyterlab_go_to_definition   # JuupyterLab 2.x
+jupyter labextension install @krassowski/jupyterlab_go_to_definition@0.7.1   # JupyterLab 1.x
 ```
 
 To update already installed extension:
