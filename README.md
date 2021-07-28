@@ -2,6 +2,12 @@
 
 [![Build Status](https://travis-ci.org/krassowski/jupyterlab-go-to-definition.svg?branch=master)](https://travis-ci.org/krassowski/jupyterlab-go-to-definition) [![codebeat badge](https://codebeat.co/badges/89f4b78a-c28e-43a0-9b4c-35d36dbd9d5e)](https://codebeat.co/projects/github-com-krassowski-jupyterlab-go-to-definition-master) [![Binder](https://beta.mybinder.org/badge.svg)](https://mybinder.org/v2/gh/krassowski/jupyterlab-go-to-definition/master?urlpath=lab/tree/examples/demo.ipynb)
 
+## Status: inactive
+
+This extension is no longer maintained. Please use [jupyterlab-lsp](https://github.com/krassowski/jupyterlab-lsp) which provides more features, including  advanced autocompletion, code navigation, hover suggestions, linters, etc. The code shared between the `jupyterlab-lsp` and `jupyterlab-go-to-definition` extensions was moved to `@krassowski/code-jumpers` library and could be re-used to update `jupyterlab-go-to-definition` to work with current JupyterLab versions, however I do not have time to support both extensions and focus on making `jupyterlab-lsp` better.
+
+## Description
+
 Jump to definition of a variable or function in JupyterLab notebook and file editor.
 
 Use <kbd>Alt</kbd> + <kbd>click</kbd> to jump to a definition using your mouse, or <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>B</kbd> keyboard-only alternative.
@@ -33,13 +39,9 @@ Please go to `Settings > Advanced Setting Editor > Go-to-definition` and set a m
 
 Safari users: Safari does not implement `MouseEvent.getModifierState` (see [#3](https://github.com/krassowski/jupyterlab-go-to-definition/issues/3)), thus only <kbd>Alt</kbd>, <kbd>Control</kbd>, <kbd>Shift</kbd> and <kbd>Meta</kbd> are supported.
 
-#### Related extensions
-
-[jupyterlab-lsp](https://github.com/krassowski/jupyterlab-lsp) provides advanced autocompletion, code navigation, hover suggestions, linters, etc. It depends on this extension for the jumping functionality, thus all the jumps are recorded in a shared history and the "go back" option should work with jumps performed with both: shortcuts from this extension and context-menu actions of jupyterlab-lsp.
-
 ## Prerequisites
 
-* JupyterLab 1.0+
+* JupyterLab >= 1.0, <= 2.2
 
 ## Installation
 
